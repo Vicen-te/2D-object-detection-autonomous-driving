@@ -1,0 +1,10 @@
+.venv/
+
+dataset/labels/
+dataset/images/
+
+runs/
+training_results/
+*.pt
+
+scripts/__pycache__/

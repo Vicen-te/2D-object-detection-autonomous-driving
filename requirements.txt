@@ -1,0 +1,11 @@
+fiftyone
+tensorboard
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch 
+torchvision   
+torchaudio 
+ultralytics
+pyyaml
+scikit-learn
+tensorboard
+mlflow
