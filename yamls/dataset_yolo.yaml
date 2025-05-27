@@ -1,7 +1,3 @@
-path: ../dataset/
-train: images/train
-val: images/val
-test: images/test
 names:
   0: bicycle
   1: bus
@@ -10,3 +6,7 @@ names:
   4: motorcycle
   5: trafficcone
   6: truck
+path: ../dataset/
+test: images/test
+train: images/train_augmented
+val: images/val

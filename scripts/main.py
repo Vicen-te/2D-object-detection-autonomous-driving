@@ -1,22 +1,31 @@
 import json, time 
 from pathlib import Path
 
-from convert_coco_to_yolo import verify_path, convert_labels, create_yaml_from_coco, get_filtered_categories_and_names
+from convert_coco_to_yolo import verify_path, convert_labels, create_yaml_from_coco, get_filtered_categories_and_names, update_train_path
 from visualize_dataset import visualize_dataset, arguments
 from split_dataset import map_images, strartified_data, save_images
 from train_model import train
+from rename_dataset_images import rename_images, update_coco_json
+from augmentation_yolo import augment_dataset
 
 
-dataset_dir = Path.cwd() / 'dataset'
-
+DATASET_DIR = Path.cwd() / 'dataset'
 
 def convert_coco_to_yolo():
     # Path to the COCO annotations JSON file
-    coco_json_file = dataset_dir / 'labels' / 'labels_coco.json'
+    original_coco_json_file = DATASET_DIR / 'labels' / 'labels_coco_original.json'
+    coco_json_file = DATASET_DIR / 'labels' / 'labels_coco.json'
 
     # Path where you want to save YOLO annotations
-    output_dir = dataset_dir / 'labels' / 'unprocessed' 
-    yaml_output_path = dataset_dir / 'yamls' / 'dataset_yolo.yaml'
+    output_dir = DATASET_DIR / 'labels' / 'renamed' 
+    yaml_output_path = Path('yamls') / 'dataset_yolo.yaml'
+
+    csv_path = DATASET_DIR / 'images' / 'original_names_map.json'
+    source_images_folder = DATASET_DIR / 'images' / 'unprocessed'
+    renamed_images_folder = DATASET_DIR / 'images' / 'renamed'
+
+    rename_images(source_images_folder, renamed_images_folder, csv_path)
+    update_coco_json(csv_path, original_coco_json_file, DATASET_DIR / 'labels' / 'labels_coco.json')
 
     # Verify the output directory exists
     verify_path(output_dir)
@@ -37,8 +46,8 @@ def convert_coco_to_yolo():
 
 def split_dataset():
     # Directorios
-    source_images_dir = dataset_dir / 'images' / 'unprocessed' 
-    source_labels_dir = dataset_dir / 'labels' / 'unprocessed' 
+    source_images_dir = DATASET_DIR / 'images' / 'renamed' 
+    source_labels_dir = DATASET_DIR / 'labels' / 'renamed' 
 
     if not source_images_dir.exists():
         raise Exception(f"Source images directory not found: {source_images_dir}")
@@ -64,8 +73,8 @@ def split_dataset():
     }
 
     for split, images in split_data.items():
-        images_dir = dataset_dir / 'images' / split
-        labels_dir = dataset_dir / 'labels' / split
+        images_dir = DATASET_DIR / 'images' / split
+        labels_dir = DATASET_DIR / 'labels' / split
 
         # Crear la carpeta 'images' y 'labels' si no existen
         images_dir.mkdir(parents=True, exist_ok=True)
@@ -78,18 +87,34 @@ def split_dataset():
     for split, images in split_data.items():
         print(f"{split.capitalize()}: {len(images)}")
 
+def train_augmented_dataset():
+    input_img_folder =  DATASET_DIR / 'images' / 'train'
+    input_label_folder = DATASET_DIR / 'labels' / 'train'
+
+    output_img_folder = DATASET_DIR / 'images' / 'train_augmented'
+    output_label_folder = DATASET_DIR / 'labels' / 'train_augmented'
+
+    augment_dataset(input_img_folder, input_label_folder, output_img_folder, output_label_folder, augmentations_per_image=1)
+
 
 def create_data():
-    start_time = time.time()
     convert_coco_to_yolo()
     split_dataset()
-    end_time = time.time() 
-    elapsed = end_time - start_time
-    print(f"Tiempo total de ejecución: {elapsed:.4f} segundos")
+    train_augmented_dataset()
+    update_train_path(Path('yamls') / 'dataset_yolo.yaml',  'images/train_augmented')
 
 if __name__ == "__main__":
     args = arguments()
-    #visualize_dataset(args)
 
-    #create_data()
-    train()
+    start_time = time.time()
+
+    create_data()
+    visualize_dataset(args)
+    #train()
+
+    end_time = time.time() 
+    elapsed = end_time - start_time
+    print(f"comienzo{start_time} - fin{end_time}")
+    print(f"Tiempo total de ejecución: {elapsed:.4f} segundos")
+
+    

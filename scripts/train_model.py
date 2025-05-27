@@ -3,7 +3,7 @@ from ultralytics.utils.benchmarks import benchmark
 
 import torch, torchvision
 
-def train(resume=False):
+def train(resume=False, pretrained=False):
     #mlflow.set_tracking_uri("file:///C")
     settings.update({"tensorboard": True, "mlflow": True})
 
@@ -16,7 +16,8 @@ def train(resume=False):
         cfg="./yamls/cfg.yaml", 
         project= "./training_results",  # Carpeta donde se guardarán los resultados
         name="yolo11n_model",
-        resume=resume,
+        resume=resume, # Reanudar el entrenamiento desde el último punto de control
+        pretrained=pretrained, # Sin Fine-tuning
         # weights='./yolo11n_model/weights/last.pt',
         device='cuda' if torch.cuda.is_available() else 'cpu',  # Usa GPU si está disponible
     )
@@ -29,8 +30,9 @@ def train(resume=False):
     # Mostrar métricas de evaluación
     # print(results.pandas().xywh)  # Las métricas están en formato de pandas DataFrame
 
-    # Hacer predicciones con el modelo entrenado
-    # results = model.predict('path/to/your/test_image.jpg')
+
+    # Hacer inferencias con el modelo entrenado
+    # results = model.predict(source='path/to/your/test_image.jpg', conf=0.25)  # Cambia la ruta a tu imagen de prueba
 
     # Mostrar resultados
     # results.show()  # Muestra la imagen con las predicciones

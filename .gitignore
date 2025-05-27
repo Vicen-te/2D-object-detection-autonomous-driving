@@ -1,7 +1,6 @@
 .venv/
 
-dataset/labels/
-dataset/images/
+dataset/
 
 runs/
 training_results/

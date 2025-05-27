@@ -148,3 +148,15 @@ def create_yaml_from_coco(names, yaml_output_path):
         yaml.dump(data_yaml, f, sort_keys=False)
 
     print(f"Archivo YAML guardado en: {yaml_output_path}")
+
+def update_train_path(yaml_path, new_train_path):
+
+    with open(yaml_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    data['train'] = new_train_path
+
+    with open(yaml_path, 'w') as f:
+        yaml.dump(data, f)
+
+    print(f"Updated train path to: {new_train_path}")
