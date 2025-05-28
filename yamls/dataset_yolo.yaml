@@ -8,5 +8,5 @@ names:
   6: truck
 path: ../dataset/
 test: images/test
-train: images/train_augmented
+train: images/train
 val: images/val

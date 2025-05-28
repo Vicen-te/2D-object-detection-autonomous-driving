@@ -7,7 +7,7 @@ mode: train # (str) YOLO mode, i.e. train, val, predict, export, track, benchmar
 # Train settings -------------------------------------------------------------------------------------------------------
 model:  # (str, optional) path to model file, i.e. yolov8n.pt, yolov8n.yaml
 data:  # (str, optional) path to data file, i.e. coco8.yaml
-epochs: 100 # (int) number of epochs to train for
+epochs: 1000 # (int) number of epochs to train for
 time: # (float, optional) number of hours to train for, overrides epochs if supplied
 patience: 20 # (int) epochs to wait for no observable improvement for early stopping of training
 batch: -1 # (int) number of images per batch (-1 for AutoBatch)
@@ -16,12 +16,12 @@ save: True # (bool) save train checkpoints and predict results
 save_period: 5 # (int) Save checkpoint every x epochs (disabled if < 1)
 cache: False # (bool) True/ram, disk or False. Use cache for data loading
 device: 0 # (int | str | list, optional) device to run on, i.e. cuda device=0 or device=0,1,2,3 or device=cpu
-workers: 16 # (int) number of worker threads for data loading (per RANK if DDP)                    #########################################################################################################
+workers: 4 # (int) number of worker threads for data loading (per RANK if DDP)                    #########################################################################################################
 project:  # (str, optional) project name
 name:  # (str, optional) experiment name, results saved to 'project/name' directory
 exist_ok: False # (bool) whether to overwrite existing experiment
 pretrained: True # (bool | str) whether to use a pretrained model (bool) or a model to load weights from (str)
-optimizer: auto # (str) optimizer to use, choices=[SGD, Adam, Adamax, AdamW, NAdam, RAdam, RMSProp, auto]
+optimizer: AdamW # (str) optimizer to use, choices=[SGD, Adam, Adamax, AdamW, NAdam, RAdam, RMSProp, auto]
 verbose: True # (bool) whether to print verbose output
 seed: 0 # (int) random seed for reproducibility
 deterministic: True # (bool) whether to enable deterministic mode
@@ -31,7 +31,7 @@ cos_lr: False # (bool) use cosine learning rate scheduler
 close_mosaic: 0 # (int) disable mosaic augmentation for final epochs (0 to disable)
 resume: False # (bool) resume training from last checkpoint
 amp: True # (bool) Automatic Mixed Precision (AMP) training, choices=[True, False], True runs AMP check
-fraction: 0.01 # (float) dataset fraction to train on (default is 1.0, all images in train set) #########################################################################################################
+fraction: 1 # (float) dataset fraction to train on (default is 1.0, all images in train set) #########################################################################################################
 profile: False # (bool) profile ONNX and TensorRT speeds during training for loggers
 freeze: None # (int | list, optional) freeze first n layers, or freeze list of layer indices during training
 multi_scale: False # (bool) Whether to use multiscale during training
@@ -87,10 +87,10 @@ workspace: 4 # (int) TensorRT: workspace size (GB)
 nms: False # (bool) CoreML: add NMS
 
 # Hyperparameters ------------------------------------------------------------------------------------------------------
-lr0: 0.01 # (float) initial learning rate (i.e. SGD=1E-2, Adam=1E-3)
+lr0: 0.001 # (float) initial learning rate (i.e. SGD=1E-2, Adam=1E-3)
 lrf: 0.01 # (float) final learning rate (lr0 * lrf) 1%
 momentum: 0.937 # (float) SGD momentum/Adam beta1
-weight_decay: 0.0005 # (float) optimizer weight decay 5e-4
+weight_decay: 0.01 # (float) optimizer weight decay 5e-4
 warmup_epochs: 5.0 # (float) warmup epochs (fractions ok)
 warmup_momentum: 0.8 # (float) warmup initial momentum
 warmup_bias_lr: 0.25 # (float) warmup initial bias lr

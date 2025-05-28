@@ -58,7 +58,7 @@ def add_original_names_field(dataset: fo.Dataset, dataset_dir: str):
 
 def arguments():
     parser=ArgumentParser(description="Visualize NN/CV project dataset")
-    parser.add_argument("--path","--p",type=str,help="Path to the root folder of the dataset")
+    parser.add_argument("--path","--p",type=str,help="Path to the root folder of the yamls")
     parser.add_argument("--format","--f",type=str,choices=["yolo","coco"],help="Format of the dataset")
     parser.add_argument("--split","--s",required=False,type=str,choices=["train","val","test"],help="Split of the dataset (only for YOLO format)")
     parser.add_argument("--names","--n",required=False,type=str,help="Original names CSV file (only for YOLO format)")
@@ -73,8 +73,9 @@ def visualize_dataset(args):
     else:
         raise ValueError("Unsupported dataset format")
     
-    # Add original names field if the dataset is in YOLO format 
-    add_original_names_field(dataset, args.names)
+    if args.names:
+        # Add original names field if the dataset is in YOLO format 
+        add_original_names_field(dataset, args.names)
     
     session = fo.launch_app(dataset)
     session.wait()

@@ -18,7 +18,7 @@ def convert_coco_to_yolo():
 
     # Path where you want to save YOLO annotations
     output_dir = DATASET_DIR / 'labels' / 'renamed' 
-    yaml_output_path = Path('yamls') / 'dataset_yolo.yaml'
+    yaml_output_path =  Path(__file__).parent.parent / "yamls" / 'dataset_yolo.yaml'
 
     csv_path = DATASET_DIR / 'images' / 'original_names_map.json'
     source_images_folder = DATASET_DIR / 'images' / 'unprocessed'
@@ -41,7 +41,7 @@ def convert_coco_to_yolo():
 
     filtered_categories, names = get_filtered_categories_and_names(coco_data)
     convert_labels(coco_data, filtered_categories, output_dir)
-    create_yaml_from_coco(names, yaml_output_path)
+    # create_yaml_from_coco(names, yaml_output_path)
 
 
 def split_dataset():
@@ -94,7 +94,7 @@ def train_augmented_dataset():
     output_img_folder = DATASET_DIR / 'images' / 'train_augmented'
     output_label_folder = DATASET_DIR / 'labels' / 'train_augmented'
 
-    augment_dataset(input_img_folder, input_label_folder, output_img_folder, output_label_folder, augmentations_per_image=1)
+    augment_dataset(input_img_folder, input_label_folder, output_img_folder, output_label_folder, augmentations_per_image=3)
 
 
 def create_data():
@@ -108,9 +108,9 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    create_data()
-    visualize_dataset(args)
-    #train()
+    #create_data()
+    #visualize_dataset(args)
+    train()
 
     end_time = time.time() 
     elapsed = end_time - start_time
