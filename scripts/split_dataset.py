@@ -23,7 +23,7 @@ def map_images(image_files, source_labels_dir):
             classes = [int(line.split()[0]) for line in f if line.strip()]
             
             if classes:
-                # estrategia: usar la clase más común en esa imagen como dominante
+                # Dominant-class stratification
                 dominant_class = Counter(classes).most_common(1)[0][0] 
                 image_to_class[image_file] = dominant_class
 
