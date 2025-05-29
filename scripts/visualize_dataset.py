@@ -64,6 +64,7 @@ def add_original_names_field(dataset: fo.Dataset, json_path: str) -> None:
     new_to_original: Dict[str, str] = {v: k for k, v in original_to_new.items()}
 
     total: int = len(dataset)
+    print(f"Total samples in dataset: {total}")
     printProgressBar(0, total, prefix='Adding original names:', suffix='Complete', length=50)
 
     for idx, sample in enumerate(dataset, start=1):
@@ -85,7 +86,7 @@ def add_original_names_field(dataset: fo.Dataset, json_path: str) -> None:
 
 
 
-def visualize_dataset(format: str, path: str, split: Optional[str], names: Optional[str]):
+def visualize_dataset(path: str, format: str, split: Optional[str], names: Optional[str] = None) -> None:
     """
     Visualizes a dataset in FiftyOne app.
     Args:
@@ -98,12 +99,12 @@ def visualize_dataset(format: str, path: str, split: Optional[str], names: Optio
     dataset: fo.Dataset
     if format == "coco": 
         images_path: str = f"{path}/images"
-        labels_path: str = f"{path}/labels_coco.json"
-        dataset = load_coco_dataset(images_path, labels_path)
+        coco_path: str = f"{path}/labels_coco.json"
+        dataset = load_coco_dataset(images_path, coco_path)
 
     elif format == "yolo": 
-        dataset_path: str = f"{path}/yolo_dataset.yaml"
-        dataset = load_yolo_dataset(path, dataset_path, split)
+        yolo_path: str = f"{path}/yolo_dataset.yaml"
+        dataset = load_yolo_dataset(path, yolo_path, split)
 
     else: 
         raise ValueError("Unsupported dataset format")
@@ -118,12 +119,16 @@ def visualize_dataset(format: str, path: str, split: Optional[str], names: Optio
 
 
 
-def arguments():
+def arguments() -> Namespace:
+    """Parse command line arguments for the script.
+    Returns:
+        Namespace: Parsed command line arguments.
+    """ 
     parser=ArgumentParser(description="Visualize NN/CV project dataset")
     parser.add_argument("--path","--p",type=str,help="Path to the root folder of the yamls")
     parser.add_argument("--format","--f",type=str,choices=["yolo","coco"],help="Format of the dataset")
     parser.add_argument("--split","--s",required=False,type=str,choices=["train","val","test"],help="Split of the dataset (only for YOLO format)")
-    parser.add_argument("--names","--n",required=False,type=str,help="Path to the original names CSV file (only for YOLO format)")
+    parser.add_argument("--names","--n",required=False,type=str,help="Path to the original names JSON file (only for YOLO format)")
     args=parser.parse_args()
     return args
 

@@ -139,7 +139,6 @@ def create_yaml_from_coco(class_names: Dict[int, str], yaml_output_path: Path) -
 
     # Crear diccionario final
     data_yaml: Dict[str, Any] = {
-        'path': '../dataset/',
         'train': 'images/train',
         'val': 'images/val',
         'test': 'images/test',

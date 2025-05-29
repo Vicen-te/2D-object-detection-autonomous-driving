@@ -357,7 +357,7 @@ def transform_yolo_labels(
 
 
 def process_single_image(
-    img_path: Path,
+    images_path: Path,
     input_labels_path: Path,
     output_images_path: Path,
     output_labels_path: Path,
@@ -374,10 +374,10 @@ def process_single_image(
         output_labels_path: Path to the folder where augmented labels will be saved
         augmentations_per_image: Number of augmented copies to generate per image
     """
-    image: Image.Image = Image.open(img_path).convert("RGB")
+    image: Image.Image = Image.open(images_path).convert("RGB")
     orig_size: Tuple[int, int] = (image.width, image.height)
 
-    labels_path: Path = input_labels_path / f"{img_path.stem}.txt"
+    labels_path: Path = input_labels_path / f"{images_path.stem}.txt"
     labels: List[List[float]] = read_yolo_labels(labels_path)
 
     for i in range(augmentations_per_image):
@@ -387,8 +387,8 @@ def process_single_image(
         aug_labels: List[List[float]] = transform_yolo_labels(labels, matrix, orig_size, new_size)
 
         # Save augmented image and labels
-        aug_image_name: str = f"{img_path.stem}_aug{i+1}.jpg"
-        aug_label_name: str = f"{img_path.stem}_aug{i+1}.txt"
+        aug_image_name: str = f"{images_path.stem}_aug{i+1}.jpg"
+        aug_label_name: str = f"{images_path.stem}_aug{i+1}.txt"
 
         aug_image.save(output_images_path / aug_image_name)
         save_yolo_labels(aug_labels, output_labels_path / aug_label_name)
@@ -396,8 +396,8 @@ def process_single_image(
         # print(f"Saved image: {aug_image_name} and labels: {aug_label_name}")
 
     # Save original image and labels unchanged in output folders
-    image.save(output_images_path / img_path.name)
-    save_yolo_labels(labels, output_labels_path / f"{img_path.stem}.txt")
+    image.save(output_images_path / images_path.name)
+    save_yolo_labels(labels, output_labels_path / f"{images_path.stem}.txt")
 
     # print(f"Copied original image: {orig_img_path} and labels: {orig_label_path}")
 

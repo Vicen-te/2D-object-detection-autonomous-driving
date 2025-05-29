@@ -59,19 +59,19 @@ def stratified_split(images: List[Path]) -> Tuple[List[Path], List[Path], List[P
         Tuple[List[Path], List[Path], List[Path]]: Train, validation, and test splits.
     """
 
-    train_imgs: List[Path]
-    temp_imgs: List[Path]
-    val_imgs: List[Path]
-    test_imgs: List[Path]
+    train_images: List[Path]
+    temp_images: List[Path]
+    val_images: List[Path]
+    test_images: List[Path]
 
     # First, split into train and temp (val + test)
-    train_imgs, temp_imgs = train_test_split(images, test_size=0.2, random_state=42)
+    train_images, temp_images = train_test_split(images, test_size=0.2, random_state=42)
 
     # Then split temp into val and test (50% each of the 20% = 10% and 10%)
-    val_imgs, test_imgs = train_test_split(temp_imgs, test_size=0.5, random_state=42)
+    val_images, test_images = train_test_split(temp_images, test_size=0.5, random_state=42)
 
     # Stratified split: returns (train_images, val_images, test_images)
-    return train_imgs, val_imgs, test_imgs
+    return train_images, val_images, test_images
 
 
 
@@ -101,21 +101,21 @@ def save_images_with_labels(
 
     for i, image_file in enumerate(images, start=1):
         label_file: str = image_file.stem + '.txt'
-        source_label_path = input_labels_path / label_file
+        label_path = input_labels_path / label_file
 
-        if not source_label_path.exists():
+        if not label_path.exists():
             continue  #< Skip if no annotation
 
-        source_image_path: Path = input_images_path / image_file.name
+        image_path: Path = input_images_path / image_file.name
         destination_label_path: Path  = output_labels_path / label_file
         destination_image_path: Path  = output_images_path / image_file.name
 
         # Copy annotation content
-        label_content: str  = source_label_path.read_text()
+        label_content: str  = label_path.read_text()
         destination_label_path.write_text(label_content)
 
          # Copy image using shutil (faster and lower overhead)
-        shutil.copy2(source_image_path, destination_image_path)
+        shutil.copy2(image_path, destination_image_path)
 
         # Update progress bar on each percent change
         if i * 100 // total != (i-1) * 100 // total:

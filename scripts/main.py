@@ -1,6 +1,5 @@
 import json, time 
 from pathlib import Path
-from argparse import Namespace
 from typing import Any, Dict, List
 
 from convert_coco_yolo import (
@@ -12,7 +11,7 @@ from utils import clear_directory, rename_images
 from split_dataset import map_images_to_dominant_class, stratified_split, save_images_with_labels
 from visualize_dataset import visualize_dataset
 from augmentation_yolo import augment_dataset
-from train_model import train
+from train_model import train_model
 
 
 def convert_coco_to_yolo(
@@ -108,20 +107,20 @@ def split_dataset(
     }
 
     for split, images in split_data.items():
-        images_path: Path = images_path / split
-        labels_path: Path = labels_path / split
+        split_images_path: Path = images_path / split
+        split_labels_path: Path = labels_path / split
 
         # Create 'images' and 'labels' directories if they don't exist
-        images_path.mkdir(parents=True, exist_ok=True)
-        labels_path.mkdir(parents=True, exist_ok=True)
+        split_images_path.mkdir(parents=True, exist_ok=True)
+        split_labels_path.mkdir(parents=True, exist_ok=True)
 
         # Save images and corresponding labels to their respective folders
         save_images_with_labels(
             images, 
             renamed_labels_path, 
             renamed_images_folder, 
-            labels_path, 
-            images_path, 
+            split_labels_path, 
+            split_images_path, 
             split
         )
 
@@ -141,7 +140,7 @@ def create_data(
     coco_json_file: Path,
     original_names_map: Path,
     unprocessed_images_path: Path,
-    yolo_dataset: Path,
+    yolo_dataset_path: Path,
     train_images_path: Path,
     train_labels_path: Path,
     train_aug_images_path: Path,
@@ -166,18 +165,47 @@ def create_data(
         train_aug_labels_path (Path): Path to the folder for augmented training labels.
     """
     
-    split_dataset(images_path, labels_path, renamed_images_path, renamed_labels_path)
     convert_coco_to_yolo(unprocessed_images_path, renamed_images_path, original_coco_json_file,
-                         coco_json_file, original_names_map, images_path, yolo_dataset)
+                         coco_json_file, original_names_map, renamed_labels_path, yolo_dataset_path)
+    split_dataset(images_path, labels_path, renamed_images_path, renamed_labels_path)
     
     train_aug_images_path.mkdir(parents=True, exist_ok=True)
     train_aug_labels_path.mkdir(parents=True, exist_ok=True)
     augment_dataset(
         train_images_path, train_labels_path,
         train_aug_images_path, train_aug_labels_path,
-        augmentations_per_image=3
+        augmentations_per_image=3,
+        max_workers=6
     )
-    update_train_path(yolo_dataset,  train_aug_images_path)
+    update_train_path(yolo_dataset_path, 'images/train_augmented')
+
+
+
+def train_models(yamls_path, data_yml_path, project_path) -> None:
+
+    project_path.mkdir(parents=True, exist_ok=True)
+
+    # Paths for training models
+    yolo11n_model_path = 'yolo11n.pt'
+    custom_model_path = yamls_path / 'custom_model.yaml'
+
+    # Paths for training configurations
+    cfg_yaml_path = yamls_path / 'cfg.yaml'
+    adamw_yaml_path = yamls_path / 'adamw.yaml'
+
+
+    # 3) Fine-tuning (modelo preentrenado YOLO11n, entrenar todo) - AdamW
+    # No congelar nada, entrenar todo 
+    train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, project_path, 'model_finetuning')
+ 
+    # 1) From scratch (pesos aleatorios) - SGD
+    # Solo config, sin pesos preentrenados 
+    train_model(custom_model_path, data_yml_path, cfg_yaml_path, project_path, 'model_from_scratch')
+
+    # 2) Transfer learning (modelo preentrenado YOLO11n, congelar backbone y neck) - AdamW
+    train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, project_path, 'model_transfer_learning', unfreeze=2)
+
+    #("./training_results/yolo11n_model/weights/last.pt")
 
 
 
@@ -198,7 +226,7 @@ if __name__ == "__main__":
     coco_json_file: Path = labels_path / 'coco_labels.json'
 
     # Path where you want to save YOLO annotations
-    yolo_dataset: Path =  yamls_path / 'dataset_yolo.yaml'
+    yolo_dataset_path: Path =  dataset_path / 'yolo_dataset.yaml'
 
     original_names_map: Path = images_path / 'original_names_map.json'
     unprocessed_images_path: Path = images_path / 'unprocessed'
@@ -213,27 +241,24 @@ if __name__ == "__main__":
     train_aug_images_path: Path = images_path / 'train_augmented'
     train_aug_labels_path: Path = labels_path / 'train_augmented'
 
+    # Path for training results
+    project_path = main_path / 'training_results'
+
 
     start_time: float = time.time()
 
     # Split the dataset, convert COCO annotations to YOLO format, and augment the training data
-    create_data(
-        images_path, labels_path, renamed_images_path, renamed_labels_path,
-        original_coco_json_file, coco_json_file, original_names_map, unprocessed_images_path, yolo_dataset, 
-        train_images_path, train_labels_path, train_aug_images_path, train_aug_labels_path
-    )
+    # create_data(
+    #     images_path, labels_path, renamed_images_path, renamed_labels_path,
+    #     original_coco_json_file, coco_json_file, original_names_map, unprocessed_images_path, yolo_dataset_path, 
+    #     train_images_path, train_labels_path, train_aug_images_path, train_aug_labels_path
+    # )
 
     # Visualize the dataset
-    args = Namespace(
-        path=str(yamls_path),
-        format="yolo", #< 'coco', 'yolo'
-        split="train", #< 'train', 'val', 'test'
-        names=str(original_coco_json_file)
-    )
-    visualize_dataset(args)
+    # visualize_dataset(str(dataset_path), "yolo", "train", str(original_coco_json_file))
 
     # Train the model
-    train()
+    train_models(yamls_path, yolo_dataset_path, project_path)
 
     end_time: float = time.time() 
     elapsed: float = end_time - start_time

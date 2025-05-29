@@ -1,0 +1,23 @@
+
+{
+    "SGD": {
+    "optimizer": "SGD",
+    "lr0": 0.01,
+    "weight_decay": 0.0005 
+    },
+    "AdamW": {
+        "optimizer": "AdamW",
+        "lr0": 0.001,
+        "weight_decay": 0.01
+    },
+    "Adam":{
+        "optimizer": "Adam",
+        "lr0": 0.0005, 
+        "weight_decay": 0.0001
+    },
+    "RMSprop": {
+        "optimizer": "RMSprop",
+        "lr0": 0.0008,
+        "weight_decay": 0.0003
+    },
+}
