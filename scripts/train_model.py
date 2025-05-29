@@ -1,12 +1,12 @@
-import torch
-import mlflow, tensorboard
+import torch, mlflow
+import tensorboard
 from ultralytics import YOLO, settings
 from ultralytics.utils.benchmarks import benchmark
 from pathlib import Path
 
 
 def train_model(model_path, data_yaml_path, cfg_yaml_path, project_path, name, unfreeze=0):
-    #mlflow.set_tracking_uri("file:///C")
+    mlflow.set_tracking_uri("file:///C:\\Users\\Alumno.DESKTOP-GV16N45.000\\Desktop\\object-detection-in-2D-environments-for-autonomous-driving\\mlflow")
     settings.update({"tensorboard": True, "mlflow": True})
 
     model = YOLO(model_path) 

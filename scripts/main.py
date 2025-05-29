@@ -204,8 +204,9 @@ def train_models(
     custom_model_path = yamls_path / 'custom_model.yaml'
 
     # Paths for training configurations
-    sdg_from_scratch = yamls_path / 'sdg_from_scratch.yaml'
-    adamw_yaml_path = yamls_path / 'adamw.yaml'
+    sdg_from_scratch = yamls_path / 'sgd_from_scratch.yaml'
+    adamw_finetuning = yamls_path / 'adam_finetuning.yaml'
+    adamw_transfer_learning = yamls_path / 'adamw_transfer_learning.yaml'
     
 
     # Path for .pt files
@@ -220,17 +221,17 @@ def train_models(
 
     # 1) From scratch (pesos aleatorios) - SGD
     # Solo config, sin pesos preentrenados 
-    # train_model(custom_model_path, data_yml_path, cfg_yaml_path, train_results_path, 'model_from_scratch')
+    train_model(custom_model_path, data_yml_path, sdg_from_scratch, train_results_path, 'model_from_scratch')
     #visualize_model(model_transfer_learning_yaml_path, data_yml_path)
 
     # 2) Transfer learning (modelo preentrenado YOLO11n, congelar backbone y neck) - AdamW
-    #train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, train_results_path, 'model_transfer_learning', unfreeze=2)
+    train_model(yolo11n_model_path, data_yml_path, adamw_finetuning, train_results_path, 'model_transfer_learning', unfreeze=2)
     #visualize_model(model_finetuning_yaml_path, data_yml_path)
     #("./training_results/yolo11n_model/weights/last.pt")
 
     # 3) Fine-tuning (modelo preentrenado YOLO11n, entrenar todo) - AdamW
     # No congelar nada, entrenar todo 
-    #train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, train_results_path, 'model_finetuning')
+    train_model(yolo11n_model_path, data_yml_path, adamw_transfer_learning, train_results_path, 'model_finetuning')
     #evaluate_model(model_finetuning_yaml_path, model_finetuning_val_results_path, data_yml_path)
 
 
