@@ -38,24 +38,29 @@ def train_model(model_path, data_yaml_path, cfg_yaml_path, project_path, name, u
     )
 
 
+def evaluate_model(model_path, val_results_path, data_yaml_path):
+    
+    # Load the model
+    model = YOLO(model_path)
 
-    # Evaluar el modelo en el conjunto de prueba
-    # results = model.val()
+    # evaluate the model on the validation set
+    # This will run inference on the validation set and return metrics
+    metrics = model.val(data=data_yaml_path)
+    print(metrics) # results.pandas().xywh métricas formato pandas DataFrame
 
-    # Mostrar métricas de evaluación
-    # print(results.pandas().xywh)  # Las métricas están en formato de pandas DataFrame
+    # Visualize the model predictions on the validation set
+    # model.plot_results(save_dir=val_results_path)  # This will plot the results of the validation set
 
+    # If you want to visualize a specific image, you can use:
+    # results = model.predict(source='path/to/your/image.jpg', conf=0.25, save=True)  # Cambia la ruta a tu imagen
+    # 'save=True' guarda las imágenes con las cajas predichas en 'runs/detect/predict' por defecto
 
-
-
-    # Hacer inferencias con el modelo entrenado
-    # results = model.predict(source='path/to/your/test_image.jpg', conf=0.25)  # Cambia la ruta a tu imagen de prueba
+    # También puedes iterar sobre los resultados y mostrar en consola info:
+    #for r in results:
+    #    print(r.boxes)  # cajas detectadas
 
     # Mostrar resultados
     # results.show()  # Muestra la imagen con las predicciones
-
-
-
 
     # Benchmark
     #benchmark(model="yolo11n.pt", data="coco8.yaml", imgsz=640, half=False, device=0)

@@ -11,7 +11,7 @@ from utils import clear_directory, rename_images
 from split_dataset import map_images_to_dominant_class, stratified_split, save_images_with_labels
 from visualize_dataset import visualize_dataset
 from augmentation_yolo import augment_dataset
-from train_model import train_model
+from train_model import train_model, evaluate_model
 
 
 def convert_coco_to_yolo(
@@ -175,37 +175,63 @@ def create_data(
         train_images_path, train_labels_path,
         train_aug_images_path, train_aug_labels_path,
         augmentations_per_image=3,
-        max_workers=6
+        max_workers=8
     )
     update_train_path(yolo_dataset_path, 'images/train_augmented')
 
 
 
-def train_models(yamls_path, data_yml_path, project_path) -> None:
+def train_models(
+    yamls_path: Path, 
+    data_yml_path: Path,
+    train_results_path: Path, 
+    val_results_path: Path
+) -> None:
+    """
+    Train YOLO models using different configurations and evaluate them.
+    Args:
+        yamls_path (Path): Path to the directory containing YAML configuration files.
+        data_yml_path (Path): Path to the YOLO dataset YAML file.
+        train_results_path (Path): Path to save training results.
+        val_results_path (Path): Path to save validation results.
+    """
 
-    project_path.mkdir(parents=True, exist_ok=True)
+    train_results_path.mkdir(parents=True, exist_ok=True)
+    val_results_path.mkdir(parents=True, exist_ok=True)
 
     # Paths for training models
     yolo11n_model_path = 'yolo11n.pt'
     custom_model_path = yamls_path / 'custom_model.yaml'
 
     # Paths for training configurations
-    cfg_yaml_path = yamls_path / 'cfg.yaml'
+    sdg_from_scratch = yamls_path / 'sdg_from_scratch.yaml'
     adamw_yaml_path = yamls_path / 'adamw.yaml'
+    
 
+    # Path for .pt files
+    model_finetuning_yaml_path = train_results_path / 'model_finetuning' / 'weights' / 'last.pt'
+    model_transfer_learning_yaml_path = train_results_path / 'model_transfer_learning' / 'weights' / 'last.pt'
+    model_from_scratch_yaml_path = train_results_path / 'model_from_scratch' / 'weights' / 'last.pt'
+
+    # Path to model validation results
+    model_finetuning_val_results_path = val_results_path / 'model_finetuning' 
+    model_transfer_learning_val_results_path = val_results_path / 'model_transfer_learning' 
+    model_from_scratch_val_results_path = val_results_path / 'model_from_scratch'
+
+    # 1) From scratch (pesos aleatorios) - SGD
+    # Solo config, sin pesos preentrenados 
+    # train_model(custom_model_path, data_yml_path, cfg_yaml_path, train_results_path, 'model_from_scratch')
+    #visualize_model(model_transfer_learning_yaml_path, data_yml_path)
+
+    # 2) Transfer learning (modelo preentrenado YOLO11n, congelar backbone y neck) - AdamW
+    #train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, train_results_path, 'model_transfer_learning', unfreeze=2)
+    #visualize_model(model_finetuning_yaml_path, data_yml_path)
+    #("./training_results/yolo11n_model/weights/last.pt")
 
     # 3) Fine-tuning (modelo preentrenado YOLO11n, entrenar todo) - AdamW
     # No congelar nada, entrenar todo 
-    train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, project_path, 'model_finetuning')
- 
-    # 1) From scratch (pesos aleatorios) - SGD
-    # Solo config, sin pesos preentrenados 
-    train_model(custom_model_path, data_yml_path, cfg_yaml_path, project_path, 'model_from_scratch')
-
-    # 2) Transfer learning (modelo preentrenado YOLO11n, congelar backbone y neck) - AdamW
-    train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, project_path, 'model_transfer_learning', unfreeze=2)
-
-    #("./training_results/yolo11n_model/weights/last.pt")
+    #train_model(yolo11n_model_path, data_yml_path, adamw_yaml_path, train_results_path, 'model_finetuning')
+    #evaluate_model(model_finetuning_yaml_path, model_finetuning_val_results_path, data_yml_path)
 
 
 
@@ -242,8 +268,8 @@ if __name__ == "__main__":
     train_aug_labels_path: Path = labels_path / 'train_augmented'
 
     # Path for training results
-    project_path = main_path / 'training_results'
-
+    train_results_path = main_path / 'training_results'
+    val_results_path = main_path / 'val_results'
 
     start_time: float = time.time()
 
@@ -255,10 +281,10 @@ if __name__ == "__main__":
     # )
 
     # Visualize the dataset
-    # visualize_dataset(str(dataset_path), "yolo", "train", str(original_coco_json_file))
+    # visualize_dataset(str(dataset_path), "yolo", "train") #, str(original_coco_json_file))
 
     # Train the model
-    train_models(yamls_path, yolo_dataset_path, project_path)
+    train_models(yamls_path, yolo_dataset_path, train_results_path, val_results_path)
 
     end_time: float = time.time() 
     elapsed: float = end_time - start_time
