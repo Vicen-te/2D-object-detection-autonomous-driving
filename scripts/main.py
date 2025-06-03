@@ -184,6 +184,7 @@ def create_data(
 def train_models(
     yamls_path: Path, 
     data_yml_path: Path,
+    data_yml_path2: Path,
     train_results_path: Path, 
     val_results_path: Path
 ) -> None:
@@ -205,7 +206,7 @@ def train_models(
 
     # Paths for training configurations
     sdg_from_scratch = yamls_path / 'sgd_from_scratch.yaml'
-    adamw_finetuning = yamls_path / 'adam_finetuning.yaml'
+    adamw_finetuning = yamls_path / 'adamw_finetuning.yaml'
     adamw_transfer_learning = yamls_path / 'adamw_transfer_learning.yaml'
     
 
@@ -225,13 +226,13 @@ def train_models(
     #visualize_model(model_transfer_learning_yaml_path, data_yml_path)
 
     # 2) Transfer learning (modelo preentrenado YOLO11n, congelar backbone y neck) - AdamW
-    train_model(yolo11n_model_path, data_yml_path, adamw_finetuning, train_results_path, 'model_transfer_learning', unfreeze=2)
+    #train_model(yolo11n_model_path, data_yml_path2, adamw_finetuning, train_results_path, 'model_transfer_learning', unfreeze=2)
     #visualize_model(model_finetuning_yaml_path, data_yml_path)
     #("./training_results/yolo11n_model/weights/last.pt")
 
     # 3) Fine-tuning (modelo preentrenado YOLO11n, entrenar todo) - AdamW
     # No congelar nada, entrenar todo 
-    train_model(yolo11n_model_path, data_yml_path, adamw_transfer_learning, train_results_path, 'model_finetuning')
+    #train_model(yolo11n_model_path, data_yml_path2, adamw_transfer_learning, train_results_path, 'model_finetuning')
     #evaluate_model(model_finetuning_yaml_path, model_finetuning_val_results_path, data_yml_path)
 
 
@@ -254,6 +255,7 @@ if __name__ == "__main__":
 
     # Path where you want to save YOLO annotations
     yolo_dataset_path: Path =  dataset_path / 'yolo_dataset.yaml'
+    yolo_dataset_path2: Path =  dataset_path / 'yolo_dataset2.yaml'
 
     original_names_map: Path = images_path / 'original_names_map.json'
     unprocessed_images_path: Path = images_path / 'unprocessed'
@@ -285,7 +287,7 @@ if __name__ == "__main__":
     # visualize_dataset(str(dataset_path), "yolo", "train") #, str(original_coco_json_file))
 
     # Train the model
-    train_models(yamls_path, yolo_dataset_path, train_results_path, val_results_path)
+    train_models(yamls_path, yolo_dataset_path, yolo_dataset_path2, train_results_path, val_results_path)
 
     end_time: float = time.time() 
     elapsed: float = end_time - start_time
