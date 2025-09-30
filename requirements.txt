@@ -1,11 +1,16 @@
-fiftyone
-tensorboard
---extra-index-url https://download.pytorch.org/whl/cu126
+tqdm
+--extra-index-url https://download.pytorch.org/whl/cu128
 torch 
 torchvision   
-torchaudio 
 ultralytics
-pyyaml
-scikit-learn
+fiftyone
 tensorboard
-mlflow
+pyyaml
+pynvml
+wmi
+
+
+scikit-learn==1.6.1
+mlflow==2.22.1
+
+# Automatic download of YOLO11n just to perform AMP (Automatic Mixed Precision) checks

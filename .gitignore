@@ -4,8 +4,11 @@ dataset/
 
 runs/
 training_results/
+training_results2/
+videos/
 *.pt
 
 scripts/__pycache__/
 
 mlflow
+scripts.zip
