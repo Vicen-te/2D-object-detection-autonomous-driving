@@ -132,7 +132,7 @@ class DatasetSplitter:
             stratify=temp_classes
         )
         
-        logger.info(f"\nDataset split complete:")
+        logger.info(f"Dataset split complete:")
         logger.info(f"  Train: {len(train_images)} images ({len(train_images)/len(stratify_images):.2%})")
         logger.info(f"  Validation: {len(val_images)} images ({len(val_images)/len(stratify_images):.2%})")
         logger.info(f"  Test: {len(test_images)} images ({len(test_images)/len(stratify_images):.2%})")
@@ -164,7 +164,7 @@ class DatasetSplitter:
         output_images_path.mkdir(parents=True, exist_ok=True)
         output_labels_path.mkdir(parents=True, exist_ok=True)
         
-        logger.info(f"\nSaving {len(images)} files to {split_name} split...")
+        logger.info(f"Saving {len(images)} files to {split_name} split...")
 
         for image_file in tqdm(
             images, 

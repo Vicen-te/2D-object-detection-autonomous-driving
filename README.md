@@ -83,7 +83,7 @@ pip install -r requirements.txt
 │
 ├─ data_processor.py 			# Preprocessing pipeline
 ├─ main_pipeline.py 			# Orchestrates the full pipeline
-└─ model_trainer.py 			# Handles training of multiple models
+└─ model_manager.py 			# Manages models: training and post-training analysis
 ```
 
 ---

@@ -62,7 +62,7 @@ class FileSystemManager:
                     except OSError:
                         pass # Directory is not empty, skip
             except Exception as e:
-                logger.info(f"\nError deleting {file}: {e}")
+                logger.info(f"Error deleting {file}: {e}")
 
         logger.info(f"Finished cleaning contents of folder: {path}")
 
@@ -86,7 +86,7 @@ class FileSystemManager:
         Returns:
             Dict[str, str]: The mapping of original filename to new filename.
         """
-        logger.info(f"\nPreparing to rename and copy images from {input_folder}...")
+        logger.info(f"Preparing to rename and copy images from {input_folder}...")
         
         # Ensure output folder exists
         output_folder.mkdir(parents=True, exist_ok=True)

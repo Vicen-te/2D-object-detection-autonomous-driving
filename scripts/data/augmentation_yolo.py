@@ -494,7 +494,7 @@ class YoloAugmenter:
                     future.result()  # Wait for completion and raise exceptions
             
             except KeyboardInterrupt:
-                logger.info("\nInterruption detected. Cancelling tasks...")
+                logger.info("Interruption detected. Cancelling tasks...")
                 for future in futures:
                     future.cancel()  # Attempt to cancel pending tasks
                 executor.shutdown(wait=False)

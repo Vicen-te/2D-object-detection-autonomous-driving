@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 from utils.temperature_monitor import TemperatureMonitor
 from data_processor import DatasetProcessor
-from model_trainer import ModelTrainer
+from model_manager import ModelManager
 
 # Utility functions
 from visualization.fiftyone_visualizer import FiftyOneVisualizer
@@ -28,8 +28,8 @@ class PipelineRunner:
         self.config: Dict[str, Any] = self._define_config()
         
         # Initialize business logic modules
-        self.processor = DatasetProcessor(self.paths)
-        self.trainer = ModelTrainer(self.paths, self.config)
+        self.data_processor = DatasetProcessor(self.paths)
+        self.model_manager = ModelManager(self.paths, self.config)
 
     def _define_paths(self) -> Dict[str, Path]:
         """ Defines all project paths in a centralized dictionary. """
@@ -99,31 +99,31 @@ class PipelineRunner:
 
         # --- STAGE 1: DATASET PREPROCESSING AND PREPARATION ---
         # self.processor.run_preprocessing_pipeline(augment=True)
-        logger.info("\n--- STAGE 1: PREPROCESSING COMPLETED ---")
+        logger.info("--- STAGE 1: PREPROCESSING COMPLETED ---")
         
         # --- UTILITY: VISUALIZATION ---
-        #visualizer = FiftyOneVisualizer(self.paths['dataset_path'], "yolo", "val")
+        # visualizer = FiftyOneVisualizer(self.paths['dataset_path'], "yolo", "val")
         #visualizer.visualize()
         
         # --- STAGE 2: MODEL TRAINING ---
         monitor = TemperatureMonitor(
-            func= self.trainer.train_multiple_models,
+            func= self.model_manager.train_multiple_models,
             gpu_temp_threshold=67,
             cpu_temp_threshold=95,
             monitor_interval=30,
             max_consecutive_warnings=3,
         )
-        monitor.start()
-        logger.info("\n--- STAGE 2: TRAINING COMPLETED ---")
+        # monitor.start()
+        logger.info("--- STAGE 2: TRAINING COMPLETED ---")
 
         # --- STAGE 3: EVALUATION AND POST-TRAINING ANALYSIS ---
         # self.trainer.evaluate_all_models(split='val')
-        self.trainer.run_post_training_analysis(model_name='model_finetuning') 
-        logger.info("\n--- STAGE 3: EVALUATION COMPLETED ---")
+        self.model_manager.run_post_training_analysis(model_name='model_finetuning') 
+        logger.info("--- STAGE 3: EVALUATION COMPLETED ---")
 
         end_time: float = time.time() 
         elapsed: float = end_time - start_time
-        logger.info("\n==============================================")
+        logger.info("==============================================")
         logger.info("Pipeline Finished.")
         logger.info(f"Total execution time: {elapsed:.4f} seconds")
         logger.info("==============================================")

@@ -65,7 +65,7 @@ class YOLOManager:
         Returns:
             YOLO: The trained YOLO model object.
         """
-        logger.info(f"\n--- Starting Training Run: {name} ---")
+        logger.info(f"--- Starting Training Run: {name} ---")
         model: YOLO = YOLO(model_path)
         
         # Start Training
@@ -93,7 +93,7 @@ class YOLOManager:
         Returns:
             Dict[str, Any]: A dictionary containing the evaluation metrics.
         """
-        logger.info(f"\n--- Starting Evaluation of Model: {model_path} ---")
+        logger.info(f"--- Starting Evaluation of Model: {model_path} ---")
         model: YOLO = YOLO(model_path)
 
         # Run model validation (evaluation)
@@ -127,59 +127,61 @@ class YOLOManager:
         return results
 
 
-    def run_prediction(self, model_path: str, source: Union[str, Path], conf: float = 0.5, iou: float = 0.7) -> Any:
+    def run_prediction(self, model_path: str, source: Union[str, Path], conf: float = 0.5, iou: float = 0.7):
         """
-        Runs prediction/inference on a given image or video source.
+        Runs prediction/inference on a given image or video source in streaming mode.
         
         Args:
             model_path: Path to the trained model weights.
             source: Path to the image file, video file, or directory.
             conf: Confidence threshold for predictions.
             iou: IoU threshold for Non-Maximum Suppression (NMS).
-            
-        Returns:
-            Any: The results object from the YOLO predict operation.
         """
-        logger.info(f"\n--- Running Prediction on {source} ---")
+        logger.info(f"--- Running Prediction on {source} ---")
         model: YOLO = YOLO(model_path)
 
-        results: Any = model.predict(
+        # Stream frame by frame to avoid RAM accumulation
+        for _ in model.predict(
             source, 
-            save=True,  # Saves output images/videos with bounding boxes
+            stream=True, 
+            show=True,  # Display results in real-time
+            save=True,  # Saves output images/videos
             conf=conf, 
             iou=iou,
             device=self.device
-        )
-        logger.info("Prediction results saved to 'runs/detect/predict...' folder.")
-        return results
+        ):
+            pass  # Process each frame; nothing is stored in RAM
+
+        logger.info(f"Prediction results saved to 'runs/detect/predict...' folder.")
 
 
-    def run_tracking(self, model_path: str, source: Union[str, Path], conf: float = 0.25, iou: float = 0.7) -> Any:
+    def run_tracking(self, model_path: str, source: Union[str, Path], conf: float = 0.25, iou: float = 0.7):
         """
-        Runs object tracking on a given video source (requires a video stream or file).
+        Runs object tracking on a video source in streaming mode.
         
         Args:
             model_path: Path to the trained model weights.
             source: Path to the video file or stream URL.
             conf: Confidence threshold for detections.
             iou: IoU threshold for tracking NMS.
-            
-        Returns:
-            Any: The results object from the YOLO track operation.
         """
-        logger.info(f"\n--- Running Tracking on {source} ---")
+        logger.info(f"--- Running Tracking on {source} ---")
         model: YOLO = YOLO(model_path)
 
-        results: Any = model.track(
+         # Stream frame by frame to avoid RAM accumulation
+        for _ in model.track(
             source, 
-            show=True, # Display results in real-time
-            save=True, # Saves output video with tracks
+            stream=True, 
+            show=True,  # Display results in real-time
+            save=True,  # Saves output video with tracks
             conf=conf, 
             iou=iou,
             device=self.device
-        )
+        ):
+            pass  # Process each frame; nothing is stored in RAM
+
         logger.info("Tracking results saved to 'runs/track/track...' folder.")
-        return results
+
 
     @staticmethod
     def run_benchmark(model: str, data: str, imgsz: int = 640, half: bool = False, device: int = 0) -> None:
@@ -193,6 +195,6 @@ class YOLOManager:
             half: Use half-precision (FP16).
             device: GPU device ID (0 for first GPU, -1 for CPU).
         """
-        logger.info(f"\n--- Running Benchmark for {model} ---")
+        logger.info(f"--- Running Benchmark for {model} ---")
         benchmark(model=model, data=data, imgsz=imgsz, half=half, device=device)
         logger.info("--- Benchmark Completed ---")

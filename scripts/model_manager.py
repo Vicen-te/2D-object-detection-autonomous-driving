@@ -7,7 +7,7 @@ from model.clustering_analyzer import ClusteringAnalyzer
 from utils.config_logging import logger
 
 
-class ModelTrainer:
+class ModelManager:
     """
     Manages the training, evaluation, prediction, and post-training tasks 
     for object detection models (YOLO).
@@ -52,7 +52,7 @@ class ModelTrainer:
                 'name': 'model_transfer_learning',
                 'weights': yolo_base_model,
                 'config_yml': yamls_path / 'adamw_transfer_learning.yaml',
-                'data_yml': data_yml_path_base
+                'data_yml': data_yml_path
             },
             # 3. Fine-Tuning (Pre-trained YOLO11n, Train All) - AdamW
             {
@@ -64,7 +64,7 @@ class ModelTrainer:
         ]
 
         for cfg in training_configs:
-            logger.info(f"\n--- Training: {cfg['name']} ---")
+            logger.info(f"--- Training: {cfg['name']} ---")
             self.manager.train_model(
                 cfg['weights'], 
                 cfg['data_yml'], 
@@ -79,7 +79,7 @@ class ModelTrainer:
         """
         Evaluates the trained models on the specified dataset split.
         """
-        logger.info("\n Starting Model Evaluation...")
+        logger.info("Starting Model Evaluation...")
         
         trained_models = ['model_from_scratch', 'model_transfer_learning', 'model_finetuning']
         data_yml_path = self.paths.get('yolo_dataset_path')
@@ -98,19 +98,17 @@ class ModelTrainer:
         logger.info("Model Evaluation Finished.")
 
 
-    def run_post_training_analysis(self, model_name: str = 'model_finetuning') -> None:
+    def run_clustering_analysis(self, model_name: str = 'model_finetuning') -> None:
         """
-        Performs post-training analysis like error clustering and video prediction/tracking.
+        Performs clustering analysis on validation images using the trained model.
         """
-        logger.info("\nStarting Post-Training Analysis...")
-        
-        model_path: Path = self.paths['train_results_path'] / model_name / 'weights' / 'best.pt'
+        logger.info("Starting Clustering Analysis...")
 
+        model_path: Path = self.paths['train_results_path'] / model_name / 'weights' / 'best.pt'
         if not model_path.exists():
-            logger.info(f"  > Analysis model '{model_name}' not found. Aborting.")
+            logger.info(f"  > Analysis model '{model_name}' not found. Aborting clustering.")
             return
 
-        # 1. Clustering 
         num_clusters = self.config.get('num_clusters', 7)
         random_state = self.config.get('random_state', 100107)
         val_images_path = self.paths['images_path'] / 'val'
@@ -120,14 +118,31 @@ class ModelTrainer:
         analyzer.run_analysis(val_images_path, model_path, num_samples=5)
         logger.info("  > Clustering completed.")
 
-        # 2. Video Prediction/Tracking (Demo)
-        # video_source = self.paths['video_source']
-        # conf_thres = self.config.get('conf_thres', 0.5)
-        # iou_thres = self.config.get('iou_thres', 0.4)
 
-        # logger.info(f"  > Running Prediction/Tracking on video {video_source.name}...")
-        # self.manager.run_tracking(model_path, video_source, conf_thres, iou_thres)
-        # self.manager.run_prediction(model_path, video_source, conf_thres, iou_thres)
-        # logger.info("  > Prediction/Tracking completed.")
-        
-        # logger.info("Post-Training Analysis Finished.")
+    def run_video_prediction_tracking(self, model_name: str = 'model_finetuning') -> None:
+        """
+        Performs video prediction and tracking using the trained model.
+        """
+        logger.info("Starting Video Prediction/Tracking...")
+
+        model_path: Path = self.paths['train_results_path'] / model_name / 'weights' / 'best.pt'
+        if not model_path.exists():
+            logger.info(f"  > Analysis model '{model_name}' not found. Aborting video prediction/tracking.")
+            return
+
+        video_source = self.paths['video_source']
+        conf_thres = self.config.get('conf_thres', 0.5)
+        iou_thres = self.config.get('iou_thres', 0.4)
+
+        logger.info(f"  > Running Prediction/Tracking on video {video_source.name}...")
+        self.manager.run_tracking(model_path, video_source, conf_thres, iou_thres)
+        self.manager.run_prediction(model_path, video_source, conf_thres, iou_thres)
+        logger.info("  > Prediction/Tracking completed.")
+
+
+    def run_post_training_analysis(self, model_name: str = 'model_finetuning') -> None:
+        """
+        Performs full post-training analysis: clustering and video prediction/tracking.
+        """
+        self.run_clustering_analysis(model_name)
+        self.run_video_prediction_tracking(model_name)

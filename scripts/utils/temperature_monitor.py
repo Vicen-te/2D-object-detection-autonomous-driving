@@ -8,8 +8,6 @@ from utils.config_logging import logger
 import pynvml
 import wmi
 import sys
-import clr
-from pathlib import Path
 
 class TemperatureExceededException(Exception):
     def __init__(self, cpu_temp, gpu_temp):
@@ -104,7 +102,6 @@ class TemperatureMonitor:
                     (gpu_temp is not None and gpu_temp > self.gpu_temp_threshold)
                 )
 
-                # print(f"CPU Temp: {cpu_temp}°C, GPU Temp: {gpu_temp}°C", end="" if overheat else "\n")
                 logger.info(f"CPU Temp: {cpu_temp}°C, GPU Temp: {gpu_temp}°C")
 
                 if overheat:
