@@ -11,9 +11,7 @@ from typing import List, Dict
 from collections import defaultdict
 from tqdm import tqdm
 from utils.types_aliases import FeatureData
-
-from scripts.utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class ClusteringAnalyzer:

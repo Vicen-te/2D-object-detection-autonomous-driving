@@ -6,9 +6,7 @@ from sklearn.model_selection import train_test_split
 import shutil
 from collections import Counter
 from tqdm import tqdm
-
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class DatasetSplitter:

@@ -3,14 +3,14 @@ import time
 from pathlib import Path
 from typing import Dict, Any
 
+from utils.temperature_monitor import TemperatureMonitor
 from data_processor import DatasetProcessor
 from model_trainer import ModelTrainer
 
 # Utility functions
 from visualization.fiftyone_visualizer import FiftyOneVisualizer
 
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import *
 
 
 class PipelineRunner:
@@ -106,7 +106,14 @@ class PipelineRunner:
         #visualizer.visualize()
         
         # --- STAGE 2: MODEL TRAINING ---
-        # self.trainer.train_multiple_models()
+        monitor = TemperatureMonitor(
+            func= self.trainer.train_multiple_models,
+            gpu_temp_threshold=67,
+            cpu_temp_threshold=95,
+            monitor_interval=30,
+            max_consecutive_warnings=3,
+        )
+        monitor.start()
         logger.info("\n--- STAGE 2: TRAINING COMPLETED ---")
 
         # --- STAGE 3: EVALUATION AND POST-TRAINING ANALYSIS ---
@@ -122,10 +129,15 @@ class PipelineRunner:
         logger.info("==============================================")
 
 
+def hello(msg: str = "hello"):
+    print(msg)
+    
+
 if __name__ == "__main__":
     # The main path (the directory containing 'dataset', 'yamls', etc.)
     # Assumes the script is run from a sub-directory, hence parent.parent
     MAIN_PATH = Path(__file__).parent.parent
+    setup_logging()
     
     # Instantiate and run the orchestrator
     pipeline = PipelineRunner(MAIN_PATH)

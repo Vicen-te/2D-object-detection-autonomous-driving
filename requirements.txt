@@ -6,7 +6,7 @@ ultralytics
 fiftyone
 tensorboard
 pyyaml
-pynvml
+nvidia-ml-py
 wmi
 
 

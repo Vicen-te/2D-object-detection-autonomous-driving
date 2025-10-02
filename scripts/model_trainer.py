@@ -4,9 +4,7 @@ from typing import Dict, Any
 
 from model.yolo_manager import YOLOManager
 from model.clustering_analyzer import ClusteringAnalyzer 
-
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class ModelTrainer:

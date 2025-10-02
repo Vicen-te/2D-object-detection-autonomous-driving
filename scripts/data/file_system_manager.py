@@ -4,9 +4,7 @@ from pathlib import Path
 import shutil
 from typing import Dict, List
 from tqdm import tqdm
-
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class FileSystemManager:

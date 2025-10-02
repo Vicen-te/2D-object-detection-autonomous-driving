@@ -9,8 +9,7 @@ import json
 import re
 from tqdm import tqdm
 
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class FiftyOneVisualizer:

@@ -9,9 +9,7 @@ import random
 import math
 from tqdm import tqdm 
 from utils.types_aliases import BBoxAbs, BBoxYolo, AffineMatrix
-
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class YoloAugmenter:

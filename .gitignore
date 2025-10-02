@@ -8,7 +8,7 @@ training_results2/
 videos/
 *.pt
 
-scripts/__pycache__/
+__pycache__
 
 mlflow
 scripts.zip

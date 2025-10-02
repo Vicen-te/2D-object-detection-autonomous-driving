@@ -8,8 +8,7 @@ from data.file_system_manager import FileSystemManager
 from data.augmentation_yolo import YoloAugmenter
 from data.dataset_splitter import DatasetSplitter
 
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class DatasetProcessor:

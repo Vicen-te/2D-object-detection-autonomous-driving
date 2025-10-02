@@ -8,9 +8,7 @@ from ultralytics import YOLO, settings
 from ultralytics.utils.benchmarks import benchmark
 from pathlib import Path
 from typing import Dict, Any, Union, Optional
-
-from scripts.utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class YOLOManager:

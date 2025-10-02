@@ -5,9 +5,7 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 from tqdm import tqdm
-
-from utils.config_logging import setup_logging
-logger = setup_logging()
+from utils.config_logging import logger
 
 
 class CocoConverter:

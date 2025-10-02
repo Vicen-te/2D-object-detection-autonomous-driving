@@ -1,9 +1,13 @@
 # config_logging.py
 import logging
+import sys
 
 def setup_logging(level=logging.INFO):
     logging.basicConfig(
         level=level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format="[%(levelname)s] %(asctime)s - %(message)s",
+        datefmt="%Y-%d-%m %H:%M:%S",
+        stream=sys.stdout
     )
-    return logging.getLogger()
+
+logger = logging.getLogger()
