@@ -21,7 +21,7 @@ class ClusteringAnalyzer:
     """
 
 
-    def __init__(self, n_clusters: int = 7, random_state: int = 42):
+    def __init__(self, num_clusters: input, random_state: int):
         """
         Initializes the analyzer with clustering parameters.
         
@@ -29,7 +29,7 @@ class ClusteringAnalyzer:
             n_clusters: Number of clusters (K) for K-Means.
             random_state: Seed for reproducibility in clustering and t-SNE.
         """
-        self.n_clusters = n_clusters
+        self.num_clusters = num_clusters
         self.random_state = random_state
         self.kmeans_model: KMeans | None = None
         self.feature_vectors: np.ndarray = np.array([])
@@ -37,7 +37,7 @@ class ClusteringAnalyzer:
         self.cluster_labels: np.ndarray = np.array([])
 
 
-    def extract_features_from_images(self, model: YOLO, dataset_path: str, layer_index: int = 10) -> FeatureData:
+    def extract_features_from_images(self, model: YOLO, dataset_path: str, layer_index: int) -> FeatureData:
         """
         Processes images, performs YOLO inference, and extracts feature vectors 
         from a specified layer for each detection.
@@ -66,31 +66,23 @@ class ClusteringAnalyzer:
             ncols=100
         ):
             try:
-                # Use YOLO's built-in predict method with 'embed' argument
-                # This returns a list of results objects, typically one per image.
-                # NOTE: The provided original code assumes a flat vector is returned
-                # by embeddings[0].cpu().numpy().flatten(). This works if the model
-                # is modified to only output a single feature vector per image or 
-                # if YOLO's structure is altered. We adapt to the common use case 
-                # where the embedding is extracted from the Results object.
+                # Predict using YOLO and extract embeddings from the specified layer
                 embeddings = model.predict(
                     str(filepath), 
-                    embed=[layer_index], # Extract embeddings from the specified layer
+                    embed=[layer_index], 
                     verbose=False
                 ) 
                 
                 if embeddings and len(embeddings) > 0:
-                    # Assuming we take the full embedding vector related to the image
-                    # The exact way to retrieve the single feature vector might depend
-                    # on the ultralytics version and custom model configuration.
-                    # This line is a common adaptation for getting the overall feature.
-                    vec = embeddings[0].cpu().numpy().flatten()
+                    # Take the first embedding and convert it to a flat numpy vector
+                    vec: np.ndarray  = embeddings[0].cpu().numpy().flatten()
                     
                     feature_vectors.append(vec)
                     image_ids.append(filepath.name)
                 else:
                     logger.warning(f"No valid detections or embeddings for {filepath.name}")
                     pass
+
             except Exception as e:
                 logger.exception(f"Error processing image {filepath.name}: {e}")
                 
@@ -111,9 +103,9 @@ class ClusteringAnalyzer:
         if self.feature_vectors.size == 0:
             raise ValueError("No feature vectors available. Run extract_features_from_images first.")
             
-        logger.info(f"Performing K-Means clustering with K={self.n_clusters}...")
+        logger.info(f"Performing K-Means clustering with K={self.num_clusters}...")
         self.kmeans_model = KMeans(
-            n_clusters=self.n_clusters, 
+            n_clusters=self.num_clusters, 
             random_state=self.random_state, 
             n_init='auto'
         )
@@ -122,7 +114,7 @@ class ClusteringAnalyzer:
         return self.cluster_labels
 
 
-    def visualize_tsne(self, n_components: int = 2, title_suffix: str = "", dim_labels: List[str] | None = None) -> None:
+    def visualize_tsne(self, n_components: int, title_suffix: str, dim_labels: List[str] | None) -> None:
         """
         Applies t-SNE for dimensionality reduction and visualizes the clusters.
         """
@@ -215,7 +207,7 @@ class ClusteringAnalyzer:
             plt.show()
 
 
-    def run_analysis(self, dataset_path: str, model_path: str, num_samples: int = 5) -> None:
+    def run_analysis(self, model_path: str, dataset_path: str, num_samples: int, dimension: int, layer_index: int) -> None:
         """
         Executes the full clustering and visualization pipeline.
         
@@ -231,12 +223,13 @@ class ClusteringAnalyzer:
         try:
             logger.info(f"Loading YOLO model from {model_path}...")
             yolo_model: YOLO = YOLO(model_path)
+            
         except Exception as e:
             logger.exception(f"Error loading YOLO model: {e}")
             return
 
         # STAGE 1: Feature Extraction
-        self.extract_features_from_images(yolo_model, dataset_path)
+        self.extract_features_from_images(yolo_model, dataset_path, layer_index)
         
         if self.feature_vectors.size == 0:
             logger.error("Analysis aborted: No features extracted.")
@@ -247,8 +240,8 @@ class ClusteringAnalyzer:
 
         # STAGE 3: Visualization (t-SNE)
         self.visualize_tsne(
-            n_components=2, 
-            title_suffix=f"(K={self.n_clusters})", 
+            n_components=dimension, 
+            title_suffix=f"(K={self.num_clusters})", 
             dim_labels=['t-SNE Dim 1', 't-SNE Dim 2']
         )
         

@@ -105,8 +105,9 @@ class FiftyOneVisualizer:
         try:
             with open(json_path, 'r') as f:
                 original_to_new: Dict[str, str] = json.load(f)
+
         except FileNotFoundError:
-            logger.info(f"Error: Name mapping JSON not found at {json_path}. Skipping original name enrichment.")
+            logger.exception(f"Error: Name mapping JSON not found at {json_path}. Skipping original name enrichment.")
             return
 
         # Create inverse map in memory (new_name -> original_name)
@@ -115,7 +116,7 @@ class FiftyOneVisualizer:
         # Create a view to iterate and update in batches (more efficient for large datasets)
         view = dataset.view()
         
-        updates: List[fo.Sample] = []
+        count_added = 0 
 
         for sample in tqdm(
             view, 
@@ -127,25 +128,23 @@ class FiftyOneVisualizer:
             filename: str = filepath.name
 
             # 1. Clean the filename to find the base name (e.g., '00001_aug1.jpg' -> '00001.jpg')
-            base_name: str
             match: Optional[re.Match] = re.match(r"^(.*)_aug\d+\.(\w+)$", filename)
-            
-            if match:
-                # Reconstruct base name (e.g., 00001.jpg)
-                base_name = f"{match.group(1)}.{match.group(2)}"
-            else:
-                base_name = filename
+            base_name: str = f"{match.group(1)}.{match.group(2)}" if match else filename
 
             # 2. Look up the original name using the base name
-            original_name: str = new_to_original.get(base_name, f"UNKNOWN: {filename}")
+            original_name: str = new_to_original.get(base_name)
             
             # Create a detached sample object for bulk update
-            sample["original_name"] = original_name
-            updates.append(sample)
+            if original_name:
+                sample["original_name"] = original_name
+                sample.save()
+                count_added += 1
+            else:
+                # Optional: still store UNKNOWN names
+                sample["original_name"] = f"UNKNOWN:{filename}"
+                sample.save()
 
-        # Apply updates to the dataset
-        dataset.save_samples(updates)
-        logger.info(f"Added 'original_name' field to {len(updates)} samples.")
+        logger.info(f"Added 'original_name' field to {count_added} samples.")
 
 
     @classmethod
@@ -238,34 +237,3 @@ class FiftyOneVisualizer:
         session: fo.Session = fo.launch_app(self.dataset, auto = False)
         session.wait()
         logger.info("FiftyOne App closed.")
-
-
-    @staticmethod
-    def parse_arguments() -> Namespace:
-        """
-        Parse command line arguments for the script.
-        
-        Returns:
-            Namespace: Parsed command line arguments.
-        """ 
-        parser: ArgumentParser = ArgumentParser(description="Visualize NN/CV project dataset with FiftyOne")
-        parser.add_argument("--path", "--p", type=Path, required=True, help="Path to the root folder of the dataset.")
-        parser.add_argument("--format", "--f", type=str, choices=["yolo", "coco"], required=True, help="Format of the dataset ('yolo' or 'coco').")
-        parser.add_argument("--split", "--s", required=False, type=str, choices=["train", "val", "test"], help="Split of the dataset (required for YOLO format).")
-        parser.add_argument("--names", "--n", required=False, type=Path, help="Path to the original names JSON file (e.g., original_names_map.json).")
-        args: Namespace = parser.parse_args()
-        return args
-
-
-if __name__ == "__main__":
-    try:
-        args: Namespace = FiftyOneVisualizer.parse_arguments()
-        FiftyOneVisualizer.visualize_param(
-            path=args.path, 
-            format=args.format, 
-            split=args.split, 
-            names_map_path=args.names
-        )
-
-    except Exception as e:
-        logger.info(f"An error occurred during visualization: {e}")

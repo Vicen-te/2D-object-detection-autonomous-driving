@@ -5,7 +5,7 @@ import sys
 def setup_logging(level=logging.INFO):
     logging.basicConfig(
         level=level,
-        format="[%(levelname)s] %(asctime)s - %(message)s",
+        format="[%(levelname)s] %(asctime)s | %(filename)s:%(lineno)d | %(message)s",
         datefmt="%Y-%d-%m %H:%M:%S",
         stream=sys.stdout
     )

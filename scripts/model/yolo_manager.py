@@ -82,7 +82,7 @@ class YOLOManager:
         logger.info("--- Training Completed ---")
         return model
 
-    def evaluate_model(self, model_path: str, data_yaml_path: str, split='val') -> Dict[str, Any]:
+    def evaluate_model(self, model_path: str, data_yaml_path: str, val_results_path: str, split='val') -> Dict[str, Any]:
         """
         Evaluates a trained model on the validation set specified in the data YAML.
         
@@ -115,15 +115,7 @@ class YOLOManager:
         logger.info("Evaluation Metrics:")
         logger.info(results)
         logger.info("--- Evaluation Completed ---")
-
-
-        # Visualize the model predictions on the validation set
-        # model.plot_results(save_dir=val_results_path)  # This will plot the results of the validation set
-
-        # If you want to visualize a specific image, you can use:
-        # results = model.predict(source='path/to/your/image.jpg', conf=0.25, save=True)  # Cambia la ruta a tu imagen
-        # 'save=True' guarda las imágenes con las cajas predichas en 'runs/detect/predict' por defecto
-
+        
         return results
 
 
@@ -150,7 +142,7 @@ class YOLOManager:
             iou=iou,
             device=self.device
         ):
-            pass  # Process each frame; nothing is stored in RAM
+            pass  #< Process each frame; nothing is stored in RAM
 
         logger.info(f"Prediction results saved to 'runs/detect/predict...' folder.")
 
@@ -178,7 +170,7 @@ class YOLOManager:
             iou=iou,
             device=self.device
         ):
-            pass  # Process each frame; nothing is stored in RAM
+            pass  #< Process each frame; nothing is stored in RAM
 
         logger.info("Tracking results saved to 'runs/track/track...' folder.")
 

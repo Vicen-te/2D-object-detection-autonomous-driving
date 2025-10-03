@@ -106,7 +106,7 @@ class CocoConverter:
                 image_name, image_width, image_height = image_map[image_id]
             except KeyError:
                 # This should ideally not happen if data is clean
-                logger.warning(f"Image ID {image_id} not found in image_map. Skipping annotation.")
+                logger.exception(f"Image ID {image_id} not found in image_map. Skipping annotation.")
                 continue
 
             # Calculate normalized YOLO coordinates (x_center, y_center, width_norm, height_norm)

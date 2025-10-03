@@ -60,8 +60,9 @@ class DatasetSplitter:
                     # Determine the dominant class (most common class ID)
                     dominant_class: int = Counter(classes).most_common(1)[0][0] 
                     image_to_class[image_file] = dominant_class
+
             except Exception as e:
-                logger.info(f"Warning: Could not process label file {label_path}. Skipping. Error: {e}")
+                logger.exception(f"Could not process label file {label_path}. Skipping. Exception: {e}")
 
         logger.info(f"Successfully mapped {len(image_to_class)} images to a dominant class.")
         return image_to_class
@@ -108,7 +109,7 @@ class DatasetSplitter:
         stratify_classes: List[int] = [image_to_class[img] for img in stratify_images]
 
         if not stratify_images:
-            logger.info("No labeled images found. Returning empty splits.")
+            logger.error("No labeled images found. Returning empty splits.")
             return ([], [], [])
         
         # --- Split 1: Train vs Test ---

@@ -25,7 +25,7 @@ class FileSystemManager:
                               If False, only deletes files and empty subdirectories.
         """
         if not path.exists() or not path.is_dir():
-            logger.info(f"Directory {path} does not exist or is not a directory. Skipping clear operation.")
+            logger.warning(f"Directory {path} does not exist or is not a directory. Skipping clear operation.")
             return
 
         files_iter: List[Path] = list(path.iterdir()) 
@@ -37,7 +37,7 @@ class FileSystemManager:
             return
 
         if recursive:
-            logger.info(f"Warning: Deleting {path} recursively...")
+            logger.warning(f"Deleting {path} recursively...")
             # Use shutil.rmtree for robust recursive deletion
             shutil.rmtree(path, ignore_errors=True)
             path.mkdir(parents=True, exist_ok=True)
@@ -61,8 +61,9 @@ class FileSystemManager:
                         file.rmdir() 
                     except OSError:
                         pass # Directory is not empty, skip
+
             except Exception as e:
-                logger.info(f"Error deleting {file}: {e}")
+                logger.exception(f"Error deleting {file}: {e}")
 
         logger.info(f"Finished cleaning contents of folder: {path}")
 

@@ -9,6 +9,7 @@ import pynvml
 import wmi
 import sys
 
+
 class TemperatureExceededException(Exception):
     def __init__(self, cpu_temp, gpu_temp):
         message = f"Temperature threshold exceeded! CPU: {cpu_temp}°C, GPU: {gpu_temp}°C"
@@ -58,6 +59,7 @@ class TemperatureMonitor:
             temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
             pynvml.nvmlShutdown()
             return temp
+        
         except Exception:
             return None
 
@@ -74,6 +76,7 @@ class TemperatureMonitor:
                 if sensor_type == 'temperature' and 'cpu package' in sensor_name:
                     return float(sensor.Value)
             return None
+        
         except Exception as e:
             logger.exception(f"Error retrieving CPU temperature: {e}")
             return FileNotFoundError
@@ -94,7 +97,7 @@ class TemperatureMonitor:
 
         try:
             while process.is_alive():
-                cpu_temp = self.get_cpu_temp_ohm()
+                cpu_temp = self.get_cpu_temp_lhm()
                 gpu_temp = self.get_gpu_temp_nvidia()
 
                 overheat = (
@@ -117,6 +120,11 @@ class TemperatureMonitor:
 
                 time.sleep(self.monitor_interval)
 
+        except Exception as e:
+            logger.exception(f"Unexpected error in TemperatureMonitor: {e}")
+            if process.is_alive():
+                process.terminate()
+                
         except KeyboardInterrupt:
             # Handle Ctrl+C gracefully
             logger.warning("Ctrl+C detected. Terminating training process...")

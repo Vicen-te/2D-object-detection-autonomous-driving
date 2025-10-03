@@ -19,11 +19,19 @@ class DatasetProcessor:
     """
 
 
-    def __init__(self, paths: Dict[str, Path]):
+    def __init__ \
+    (
+        self, 
+        paths: Dict[str, Path], 
+        config: Dict[str, Path], 
+        yolo_config: list[dict[str, str | Path]]
+    ):
         """
         Initializes the processor with a dictionary of configuration paths.
         """
         self.paths = paths
+        self.config = config
+        self.yolo_config = yolo_config
 
 
     def _convert_coco_to_yolo(self) -> None:
@@ -35,11 +43,13 @@ class DatasetProcessor:
         
         # 1. Rename Images and Update COCO JSON
         self.paths['renamed_images_path'].mkdir(exist_ok=True)
+        
         FileSystemManager.rename_and_copy_images(
             self.paths['unprocessed_images_path'], 
             self.paths['renamed_images_path'], 
             self.paths['original_names_map']
         )
+
         CocoConverter.update_coco_json_filenames(
             self.paths['original_names_map'], 
             self.paths['original_coco_json_file'], 
@@ -54,6 +64,7 @@ class DatasetProcessor:
         try:
             with open(self.paths['coco_json_file'], 'r') as f:
                 coco_data: Dict = json.load(f)
+
         except Exception as e:
             raise IOError(f"Error loading COCO JSON file: {e}")
 
@@ -61,6 +72,7 @@ class DatasetProcessor:
         
         CocoConverter.convert_annotations(coco_data, self.paths['renamed_labels_path'])
         CocoConverter.create_yaml_config(class_names, self.paths['yolo_dataset_path'])
+
         logger.info("COCO to YOLO conversion completed.")
 
 
@@ -69,24 +81,25 @@ class DatasetProcessor:
         Splits the annotated dataset into Train, Validation, and Test sets 
         using a stratified approach based on the dominant class.
         """
-        logger.info("Starting Stratified Dataset Split...")
+        logger.info("Starting Stratified Dataset Split...")        
 
-        renamed_images_path = self.paths['renamed_images_path']
-        renamed_labels_path = self.paths['renamed_labels_path']
-        
-        all_image_paths: List[Path] = list(renamed_images_path.glob('*.*'))
+        all_image_paths: List[Path] = list(self.paths['renamed_images_path'].glob('*.*'))
         logger.info(f"  > Total images found: {len(all_image_paths)}")
 
         # Map images to their dominant class
         image_dominant_class_map: Dict[Path, int] = DatasetSplitter.map_images_to_dominant_class(
-            all_image_paths, renamed_labels_path
+            all_image_paths, 
+            self.paths['renamed_labels_path']
         )
 
         if not image_dominant_class_map:
             raise Exception("No annotated images found for splitting.")
 
         # Stratified Split
-        train_images, val_images, test_images = DatasetSplitter.stratified_split(all_image_paths, renamed_labels_path)
+        train_images, val_images, test_images = DatasetSplitter.stratified_split(
+            all_image_paths, 
+            self.paths['renamed_labels_path']
+        )
 
         split_data: Dict[str, List[str]] = {
             'train': train_images,
@@ -104,7 +117,7 @@ class DatasetProcessor:
 
             DatasetSplitter.save_images_with_labels(
                 images, 
-                renamed_labels_path, 
+                self.paths['renamed_labels_path'], 
                 split_labels_path, 
                 split_images_path, 
                 split
@@ -114,26 +127,21 @@ class DatasetProcessor:
         logger.info("Dataset splitting completed.")
 
 
-    def _augment_dataset(self, augmentations_per_image: int = 3, max_workers: int = 8) -> None:
+    def _augment_dataset(self) -> None:
         """
         Augments the training set and updates the 'train' path in the dataset YAML file.
         """
         logger.info("Starting Data Augmentation for the Train set...")
         
-        train_images_path = self.paths['images_path'] / 'train'
-        train_labels_path = self.paths['labels_path'] / 'train'
-        train_aug_images_path = self.paths['train_aug_images_path']
-        train_aug_labels_path = self.paths['train_aug_labels_path']
+        self.paths['train_aug_images_path'].mkdir(parents=True, exist_ok=True)
+        self.paths['train_aug_labels_path'].mkdir(parents=True, exist_ok=True)
 
-        train_aug_images_path.mkdir(parents=True, exist_ok=True)
-        train_aug_labels_path.mkdir(parents=True, exist_ok=True)
-
-        yolo_augmenter = YoloAugmenter()
+        yolo_augmenter = YoloAugmenter(self.yolo_config)
         yolo_augmenter.augment_dataset(
-            train_images_path, train_labels_path,
-            train_aug_images_path, train_aug_labels_path,
-            augmentations_per_image=augmentations_per_image,
-            max_workers=max_workers
+            self.paths['train_images_path'], self.paths['train_labels_path'],
+            self.paths['train_aug_images_path'], self.paths['train_aug_labels_path'],
+            self.config['augmentations_per_image'],
+            self.config['max_workers']
         )
         
         # Update or create a the YAML file to point to the augmented train set
@@ -146,15 +154,12 @@ class DatasetProcessor:
         logger.info("Data augmentation and YAML update completed.")
 
 
-    def run_preprocessing_pipeline(self, augment: bool = True) -> None:
+    def run_preprocessing_pipeline(self, augment: bool = False) -> None:
         """
         Executes the complete data preprocessing pipeline.
         """
         self._convert_coco_to_yolo()
         self._split_dataset()
         if augment:
-            self._augment_dataset(
-                augmentations_per_image=self.paths.get('augmentations_per_image', 3),
-                max_workers=self.paths.get('max_workers', 8)
-            )
+            self._augment_dataset()
         logger.info("Data Preprocessing Pipeline Finished.")

@@ -18,24 +18,14 @@ class YoloAugmenter:
     and their corresponding YOLO-format bounding box annotations.
     """
 
-    def __init__(self, aug_params: Dict[str, Any] = None):
+    def __init__(self, aug_params: Dict[str, Any]):
         """
         Initializes the augmenter with augmentation parameters.
         
         Args:
             aug_params: Dictionary of parameters for random augmentation.
         """
-
-        # Default parameters
-        default_params = {
-            'max_rotation_deg': 30,
-            'max_translation_pct': 0.2,  # 20%
-            'min_scale': 0.8,
-            'max_scale': 1.2
-        }
-
-        # Merge user-provided params with defaults
-        self.aug_params = {**default_params, **(aug_params or {})}
+        self.aug_params = aug_params
 
         # Validate parameters
         if self.aug_params['min_scale'] >= self.aug_params['max_scale']:
@@ -168,8 +158,9 @@ class YoloAugmenter:
         return (new_x, new_y)
 
 
+    @classmethod
     def _transform_bounding_box(
-        self,
+        cls,
         box: BBoxAbs,
         matrix: AffineMatrix
     ) -> BBoxAbs:
@@ -194,7 +185,7 @@ class YoloAugmenter:
         
         # Transform all 4 corners
         transformed: List[Tuple[float, float]] = [
-            self._apply_affine_to_point(x, y, matrix) for x, y in corners
+            cls._apply_affine_to_point(x, y, matrix) for x, y in corners
         ]
         xs, ys = zip(*transformed)
 
@@ -225,8 +216,9 @@ class YoloAugmenter:
                         class_id: int = int(parts[0])
                         coords: List[float] = list(map(float, parts[1:]))
                         labels.append([float(class_id)] + coords) # Use float for class_id to match list type
+                        
                     except ValueError:
-                        logger.info(f"Warning: Skipping invalid line in {label_path}: {line.strip()}")
+                        logger.exception(f"Skipping invalid line in {label_path}: {line.strip()}")
         return labels
 
 
@@ -265,17 +257,16 @@ class YoloAugmenter:
             Tuple of (augmented_image, affine_matrix)
         """
         W, H = image.width, image.height
-        params = self.aug_params
 
         # 1. Random Parameters Generation
-        angle: float = random.uniform(-params['max_rotation_deg'], params['max_rotation_deg'])
+        angle: float = random.uniform(-self.aug_params['max_rotation_deg'], self.aug_params['max_rotation_deg'])
         
-        max_dx: float = params['max_translation_pct'] * W
-        max_dy: float = params['max_translation_pct'] * H
+        max_dx: float = self.aug_params['max_translation_pct'] * W
+        max_dy: float = self.aug_params['max_translation_pct'] * H
         translate_x: float = random.uniform(-max_dx, max_dx)
         translate_y: float = random.uniform(-max_dy, max_dy)
         
-        scale: float = random.uniform(params['min_scale'], params['max_scale'])
+        scale: float = random.uniform(self.aug_params['min_scale'], self.aug_params['max_scale'])
 
         # 2. Image Augmentation (using torchvision's affine transformation)
         image_aug: Image.Image = transforms.functional.affine(
@@ -404,8 +395,9 @@ class YoloAugmenter:
         """
         try:
             image: Image.Image = Image.open(img_path).convert("RGB")
+
         except Exception as e:
-            logger.info(f"Error opening image {img_path}: {e}")
+            logger.error(f"opening image {img_path}: {e}")
             return
 
         orig_size: Tuple[int, int] = (image.width, image.height)
@@ -456,7 +448,7 @@ class YoloAugmenter:
         ])
         
         if not image_paths:
-            logger.info(f"No images found in {input_images_path}")
+            logger.error(f"No images found in {input_images_path}")
             return
         
         total_images: int = len(image_paths)
@@ -494,7 +486,7 @@ class YoloAugmenter:
                     future.result()  # Wait for completion and raise exceptions
             
             except KeyboardInterrupt:
-                logger.info("Interruption detected. Cancelling tasks...")
+                logger.exception("Interruption detected. Cancelling tasks...")
                 for future in futures:
                     future.cancel()  # Attempt to cancel pending tasks
                 executor.shutdown(wait=False)
