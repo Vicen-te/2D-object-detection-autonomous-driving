@@ -49,6 +49,22 @@ pip install -r requirements.txt
 
 ---
 
+## Dataset
+
+For training and evaluation, this project uses the **nuImages** dataset provided by Roboflow. The dataset was downloaded in **COCO format** and is specifically designed for autonomous driving, containing annotated images suitable for 2D object detection tasks.
+
+- **Source:** [nuImages on Roboflow](https://universe.roboflow.com/new-workspace-2yqcq/nuimages-ijmym/dataset/1)  
+- **Original Dataset Terms:** [nuScenes Terms of Use](https://www.nuscenes.org/terms-of-use)  
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)  
+
+### Splits
+
+Only the train split of the original dataset was used.
+This split was further divided into three subsets — train, validation, and test — so that all experiments are performed using data derived from the same source.
+
+Additionally, you can compare your results against the original validation split provided by Roboflow to evaluate consistency with the official dataset partition.
+
+---
 
 ## Project Structure
 ```bash
@@ -56,7 +72,7 @@ pip install -r requirements.txt
 │
 ├─ data/
 │ ├─ augmentation_yolo.py 		# Data augmentation for YOLO
-│ ├─ coco_converter.py 			# Convert datasets to COCO format
+│ ├─ coco_converter.py 			# Convert COCO datasets to other formats (e.g., YOLO)
 │ ├─ dataset_splitter.py 		# Split dataset into train/val/test
 │ └─ file_system_manager.py 	# Handle dataset and file operations
 │
@@ -66,22 +82,22 @@ pip install -r requirements.txt
 │
 ├─ utils/
 │ ├─ config_logging.py          # Logging configuration
-│ ├─ temperature_monitor.py     # Optional CPU/GPU temperature monitor
 │ ├─ project_config.py          # Centralized paths and configurations
+│ ├─ temperature_monitor.py     # Optional CPU/GPU temperature monitor
 │ └─ types_aliases.py           # Type hints and custom aliases
 │
 ├─ visualization/
-│ ├─ fiftyone_visualizer.py     # Dataset visualization with FiftyOne (GUI)
 │ └─ fiftyone_cli_visualizer.py # Dataset visualization with FiftyOne (CLI)
+│ ├─ fiftyone_visualizer.py     # Dataset visualization with FiftyOne (GUI)
 │
-├─ main.py 			            # Orchestrates the full pipeline
 ├─ data_processor.py 			# Handles preprocessing pipeline
+├─ main.py 			            # Orchestrates the full pipeline
 └─ model_manager.py 			# Manages models: training and post-training analysis
 ```
 
 ---
 
-Usage
+## Usage
 
 1. Train a model
 ```bash
@@ -111,13 +127,10 @@ python scripts/visualization/fiftyone_cli_visualizer.py \
 
 ## Notes
 
-The system supports custom datasets with configurable number of classes.
-
-Training results are automatically logged into both TensorBoard and MLflow.
-
-Experiment reproducibility is ensured through configuration YAML files.
-
-Models can be switched easily between YOLO11n, YOLO11s, YOLO11m, YOLO11l, YOLO11x scales.
+- The system supports custom datasets with configurable number of classes.
+- Training results are automatically logged into both TensorBoard and MLflow.
+- Experiment reproducibility is ensured through configuration YAML files.
+- Models can be switched easily between YOLO11n, YOLO11s, YOLO11m, YOLO11l, YOLO11x scales.
 
 ---
 

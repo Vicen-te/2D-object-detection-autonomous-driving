@@ -2,7 +2,7 @@
 import math
 from pathlib import Path
 from typing import List, Dict, Tuple
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedShuffleSplit
 import shutil
 from collections import Counter
 from tqdm import tqdm
@@ -112,26 +112,23 @@ class DatasetSplitter:
             logger.error("No labeled images found. Returning empty splits.")
             return ([], [], [])
         
-        # --- Split 1: Train vs Test ---
-        train_images, temp_images, _, temp_classes = train_test_split(
-            stratify_images, 
-            stratify_classes, 
-            test_size=test_ratio, 
-            random_state=random_state,
-            stratify=stratify_classes
-        )
+        # --- Split 1: Test vs Temp(Train + Validation) ---
+        sss1 = StratifiedShuffleSplit(n_splits=1, test_size=(val_ratio + test_ratio), random_state=random_state)
+        train_idx, temp_idx = next(sss1.split(stratify_images, stratify_classes))
+
+        train_images = [stratify_images[i] for i in train_idx]
+        temp_images = [stratify_images[i] for i in temp_idx]
+        temp_classes = [stratify_classes[i] for i in temp_idx]
 
         # --- Split 2: Train vs Validation ---
         # Adjust validation ratio relative to the remaining train set
-        relative_test_size: float = val_ratio / train_ratio
-        
-        val_images, test_images, _, _ = train_test_split(
-            temp_images, 
-            temp_classes, 
-            test_size=relative_test_size, 
-            random_state=random_state,
-            stratify=temp_classes
-        )
+        val_relative_ratio : float = val_ratio / train_ratio
+
+        sss2 = StratifiedShuffleSplit(n_splits=1, test_size=val_relative_ratio, random_state=random_state)
+        val_idx, test_idx = next(sss2.split(temp_images, temp_classes))
+
+        val_images = [temp_images[i] for i in val_idx]
+        test_images = [temp_images[i] for i in test_idx]
         
         logger.info(f"Dataset split complete:")
         logger.info(f"  Train: {len(train_images)} images ({len(train_images)/len(stratify_images):.2%})")

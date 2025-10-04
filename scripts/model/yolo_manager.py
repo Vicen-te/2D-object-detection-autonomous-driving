@@ -7,7 +7,7 @@ import tensorboard
 from ultralytics import YOLO, settings
 from ultralytics.utils.benchmarks import benchmark
 from pathlib import Path
-from typing import Dict, Any, Union, Optional
+from typing import Dict, Any, Union
 from utils.config_logging import logger
 
 

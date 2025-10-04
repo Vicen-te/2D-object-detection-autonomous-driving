@@ -2,7 +2,7 @@
 from argparse import ArgumentParser, Namespace
 from enum import auto
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import fiftyone as fo
 import fiftyone.types as fot
 import json
