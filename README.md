@@ -64,35 +64,68 @@ This split was further divided into three subsets — train, validation, and tes
 
 Additionally, you can compare your results against the original validation split provided by Roboflow to evaluate consistency with the official dataset partition.
 
+
+### Structure
+
+Inside the dataset directory, you need to create two main subdirectories:
+
+```bash
+dataset/
+├── images/
+│   └── unprocessed/
+├── labels/
+```
+
+- images/unprocessed/ → Place all your raw images here.
+  - (Optional) You can keep both the original dataset and a renamed version with a cleaner naming convention.
+  - If not, the script will automatically move the renamed images to their respective split directories (train, val, test).
+  - The temporary renamed directory will be deleted after the split.
+- labels/ → Place your coco.json annotation file here.
+
+There is also an optional revert function available if you want to undo the split and restore the original dataset structure.
+
 ---
 
 ## Project Structure
 ```bash
 2D-object-detection-autonomous-driving/
 │
-├─ data/
-│ ├─ augmentation_yolo.py 		# Data augmentation for YOLO
-│ ├─ coco_converter.py 			# Convert COCO datasets to other formats (e.g., YOLO)
-│ ├─ dataset_splitter.py 		# Split dataset into train/val/test
-│ └─ file_system_manager.py 	# Handle dataset and file operations
+├─ scripts/                       # Core scripts for preprocessing, training, and evaluation
+│ ├─ data/
+│ │ ├─ augmentation_yolo.py       # Data augmentation for YOLO
+│ │ ├─ coco_converter.py          # Convert COCO datasets to YOLO format
+│ │ ├─ dataset_splitter.py        # Split dataset into train/val/test
+│ │ └─ file_system_manager.py     # Handle dataset and file operations
+│ │
+│ ├─ model/
+│ │ ├─ clustering_analyzer.py     # Optional clustering analysis of features
+│ │ └─ yolo_manager.py            # YOLO training, inference, and tracking manager
+│ │
+│ ├─ utils/
+│ │ ├─ config_logging.py          # Logging configuration
+│ │ ├─ project_config.py          # Centralized paths and configurations
+│ │ ├─ temperature_monitor.py     # Optional CPU/GPU temperature monitor
+│ │ └─ types_aliases.py           # Type hints and custom aliases
+│ │
+│ ├─ visualization/
+│ │ ├─ fiftyone_cli_visualizer.py # Dataset visualization with FiftyOne (CLI)
+│ │ ├─ fiftyone_visualizer.py     # Dataset visualization with FiftyOne (GUI)
+│ │ └─ metrics_visualizer.py      # Plot YOLO training/validation metrics from CSV
+│ │
+│ ├─ data_processor.py            # Handles preprocessing pipeline
+│ ├─ main.py                      # Orchestrates the full pipeline
+│ └─ model_manager.py             # Manages models: training and post-training analysis
 │
-├─ model/
-│ ├─ clustering_analyzer.py 	# Optional clustering analysis of features
-│ └─ yolo_manager.py 			# YOLO training, inference, and tracking manager
+├─ yamls/                         # Model configuration files
+│ ├─ *.yaml                       # Hyperparameters, training setups, optimizer settings
+│ └─ yolo11n_example.yaml         # YOLO model architecture and config
 │
-├─ utils/
-│ ├─ config_logging.py          # Logging configuration
-│ ├─ project_config.py          # Centralized paths and configurations
-│ ├─ temperature_monitor.py     # Optional CPU/GPU temperature monitor
-│ └─ types_aliases.py           # Type hints and custom aliases
+├─ videos/                        # Videos for prediction and tracking
+│ └─ *.mp4
 │
-├─ visualization/
-│ └─ fiftyone_cli_visualizer.py # Dataset visualization with FiftyOne (CLI)
-│ ├─ fiftyone_visualizer.py     # Dataset visualization with FiftyOne (GUI)
-│
-├─ data_processor.py 			# Handles preprocessing pipeline
-├─ main.py 			            # Orchestrates the full pipeline
-└─ model_manager.py 			# Manages models: training and post-training analysis
+├─ training_results/              # Model outputs and training results
+│ ├─ *.pt                         # Model weights after training
+│ └─ results.csv                  # Training metrics, including final epoch information
 ```
 
 ---
@@ -117,7 +150,7 @@ mlflow ui --backend-store-uri mlflow/
 4. Explore dataset and results with FiftyOne — You can launch the custom CLI visualizer to explore YOLO/COCO datasets:
 ```bash
 python scripts/visualization/fiftyone_cli_visualizer.py \
-  --p <path_to_dataset_root> \    # Path to the dataset root folder
+  --p <path_to_dataset_root> \    # Path to the dataset root directory
   --f <yolo_or_coco> \            # Dataset format: yolo or coco
   --s <train_val_or_test> \       # Dataset split: train, val, or test (optional, default: val)
   --n <path_to_names_json>        # Path to the original names JSON (optional)
@@ -136,5 +169,5 @@ python scripts/visualization/fiftyone_cli_visualizer.py \
 
 ## License
 
-MIT License © 2025 Vicente Brisa Saez
-GitHub: https://github.com/Vicen-te
+MIT License © 2025 Vicente Brisa Saez  
+GitHub: [https://github.com/Vicen-te](https://github.com/Vicen-te)

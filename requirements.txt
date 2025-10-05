@@ -12,5 +12,3 @@ lap
 
 scikit-learn==1.6.1
 mlflow==2.22.1
-
-# Automatic download of YOLO11n just to perform AMP (Automatic Mixed Precision) checks

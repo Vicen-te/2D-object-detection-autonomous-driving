@@ -1,14 +1,21 @@
+# Python virtual environment
 .venv/
 
+# Dataset directories
 dataset/
 
+# YOLO outputs: training runs, predictions, and video tracking
 runs/
 training_results/
-training_results2/
+
+# Video files
 videos/
+
+# Automatic download of YOLO11n just to perform AMP (Automatic Mixed Precision) checks
 *.pt
 
+# Python cache
 __pycache__
 
+# MLflow tracking directory
 mlflow
-scripts.zip

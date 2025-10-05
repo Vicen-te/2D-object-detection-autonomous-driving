@@ -65,37 +65,37 @@ class FileSystemManager:
             except Exception as e:
                 logger.exception(f"Error deleting {file}: {e}")
 
-        logger.info(f"Finished cleaning contents of folder: {path}")
+        logger.info(f"Finished cleaning contents of directory: {path}")
 
 
     @staticmethod
     def rename_and_copy_images(
-        input_folder: Path, 
-        output_folder: Path, 
-        output_json_path: Path
+        input_dir: Path, 
+        output_dir: Path, 
+        output_json: Path
     ) -> Dict[str, str]:
         """
-        Rename image files in the input folder to a consistent, sequential format 
-        (e.g., '00001.jpg') and copy them to the output folder. 
+        Rename image files in the input directory to a consistent, sequential format 
+        (e.g., '00001.jpg') and copy them to the output directory. 
         Saves the original_name -> new_name mapping to a JSON file.
         
         Args:
-            input_folder (Path): The folder containing the original images.
-            output_folder (Path): The folder where renamed images will be saved.
-            output_json_path (Path): The path to save the JSON file mapping.
+            input_dir (Path): The directory containing the original images.
+            output_dir (Path): The directory where renamed images will be saved.
+            output_json (Path): The path to save the JSON file mapping.
 
         Returns:
             Dict[str, str]: The mapping of original filename to new filename.
         """
-        logger.info(f"Preparing to rename and copy images from {input_folder}...")
+        logger.info(f"Preparing to rename and copy images from {input_dir}...")
         
-        # Ensure output folder exists
-        output_folder.mkdir(parents=True, exist_ok=True)
-        output_json_path.parent.mkdir(parents=True, exist_ok=True)
+        # Ensure output directory exists
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_json.parent.mkdir(parents=True, exist_ok=True)
 
         # Filter and sort files for consistent ordering
         files: List[Path] = sorted([
-            f for f in input_folder.iterdir()
+            f for f in input_dir.iterdir()
             if f.is_file() and f.suffix.lower() in ['.jpg', '.jpeg', '.png']
         ])
         
@@ -117,15 +117,15 @@ class FileSystemManager:
             ext: str = file_path.suffix.lower()
             # Consistent naming format (e.g., 00001.jpg)
             new_name: str = f"{idx:05d}{ext}" 
-            new_path: Path = output_folder / new_name
+            new_path: Path = output_dir / new_name
 
             # Copy and rename simultaneously
             shutil.copy2(file_path, new_path) 
             name_map[file_path.name] = new_name
 
         # Save the mapping JSON file
-        with open(output_json_path, 'w') as f:
+        with open(output_json, 'w') as f:
             json.dump(name_map, f, indent=2)
 
-        logger.info(f"Renaming complete. Mapping saved to {output_json_path}")
+        logger.info(f"Renaming complete. Mapping saved to {output_json}")
         return name_map

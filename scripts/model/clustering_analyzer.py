@@ -37,14 +37,14 @@ class ClusteringAnalyzer:
         self.cluster_labels: np.ndarray = np.array([])
 
 
-    def extract_features_from_images(self, model: YOLO, dataset_path: str, layer_index: int) -> FeatureData:
+    def extract_features_from_images(self, model: YOLO, split_images_dir: str, layer_index: int) -> FeatureData:
         """
         Processes images, performs YOLO inference, and extracts feature vectors 
         from a specified layer for each detection.
 
         Args:
             model: The loaded YOLO model (pre-trained or custom).
-            dataset_path: Path to the folder containing the images.
+            split_images_dir: Path to the directory containing the images.
             layer_index: The index of the layer to extract embeddings from (e.g., 10 for the backbone output).
 
         Returns:
@@ -52,15 +52,15 @@ class ClusteringAnalyzer:
         """
         feature_vectors: List[np.ndarray] = []
         image_ids: List[str] = []
-        image_paths: List[Path] = [
-            p for p in Path(dataset_path).iterdir() 
+        image_files: List[Path] = [
+            p for p in Path(split_images_dir).iterdir() 
             if p.suffix.lower() in ('.png', '.jpg', '.jpeg')
         ]
         
-        logger.info(f"Found {len(image_paths)} images. Starting feature extraction...")
+        logger.info(f"Found {len(image_files)} images. Starting feature extraction...")
 
         for filepath in tqdm(
-            image_paths, 
+            image_files, 
             desc='Extracting features', 
             unit='image', 
             ncols=100
@@ -116,7 +116,12 @@ class ClusteringAnalyzer:
 
     def visualize_tsne(self, n_components: int, title_suffix: str, dim_labels: List[str] | None) -> None:
         """
-        Applies t-SNE for dimensionality reduction and visualizes the clusters.
+        Performs t-SNE dimensionality reduction on extracted feature vectors and visualizes the clusters.
+
+        Args:
+            n_components: Target number of dimensions for t-SNE (2 for 2D visualization, 3 for 3D).
+            title_suffix: Suffix string to add to the plot title (e.g., showing number of clusters).
+            dim_labels: Optional list of labels for each t-SNE dimension (e.g., ['t-SNE Dim 1', 't-SNE Dim 2']).
         """
         if self.feature_vectors.size == 0 or self.cluster_labels.size == 0:
             logger.error("Skipping t-SNE: Features or labels are missing.")
@@ -150,9 +155,13 @@ class ClusteringAnalyzer:
         plt.show()
 
 
-    def display_cluster_sample_images(self, dataset_path: str, num_samples_per_cluster: int = 5) -> None:
+    def display_cluster_sample_images(self, split_images_dir: str, num_samples_per_cluster: int = 5) -> None:
         """
-        Displays a sample of unique full images for each cluster.
+        Displays a sample of unique images from each cluster.
+
+        Args:
+            split_images_dir: Path to the directory containing the images of a specific split (e.g., 'images/val').
+            num_samples_per_cluster: Maximum number of sample images to display per cluster.
         """
         if self.cluster_labels.size == 0 or self.kmeans_model is None:
             logger.error("Skipping image display: Clustering has not been performed.")
@@ -181,7 +190,7 @@ class ClusteringAnalyzer:
             plt.suptitle(f"Sample Images for Cluster {cluster_id} (Total unique: {len(unique_images)})", fontsize=14)
 
             for i, img_name in enumerate(samples_to_show):
-                img_path: Path = Path(dataset_path) / img_name
+                img_path: Path = Path(split_images_dir) / img_name
                 img: np.ndarray | None = cv2.imread(str(img_path))
                 
                 if img is None:
@@ -203,33 +212,42 @@ class ClusteringAnalyzer:
                 plt.title(f"{img_name}", fontsize=8)
                 plt.axis('off')
             
-            plt.tight_layout(rect=[0, 0, 1, 0.95]) # Adjust layout to prevent title overlap
+            plt.tight_layout(rect=[0, 0, 1, 0.95]) #< Adjust layout to prevent title overlap
             plt.show()
 
 
-    def run_analysis(self, model_path: str, dataset_path: str, num_samples: int, dimension: int, layer_index: int) -> None:
+    def run_analysis(
+        self, 
+        model_file: str, 
+        split_images_dir: str, 
+        num_samples: int, 
+        dimension: int, 
+        layer_index: int
+    ) -> None:
         """
-        Executes the full clustering and visualization pipeline.
-        
+        Executes the full clustering and visualization pipeline on a specific dataset split.
+
         Args:
-            dataset_path: Path to the image folder (e.g., 'images/val').
-            model_path: Path to the trained YOLO model file (e.g., 'best.pt').
-            num_samples: Number of sample images to display per cluster.
+            model_file: Path to the trained YOLO model weights (e.g., 'runs/train/exp/weights/best.pt').
+            split_images_dir: Path to the directory containing the images of a specific split (e.g., 'images/val').
+            num_samples: Number of sample images to display for each cluster.
+            dimension: Target dimension for feature reduction (e.g., 2 for 2D visualization).
+            layer_index: Index of the YOLO layer from which to extract features.
         """
         logger.info("==============================================")
         logger.info("Starting Feature Clustering Analysis")
         logger.info("==============================================")
         
         try:
-            logger.info(f"Loading YOLO model from {model_path}...")
-            yolo_model: YOLO = YOLO(model_path)
+            logger.info(f"Loading YOLO model from {model_file}...")
+            yolo_model: YOLO = YOLO(model_file)
             
         except Exception as e:
             logger.exception(f"Error loading YOLO model: {e}")
             return
 
         # STAGE 1: Feature Extraction
-        self.extract_features_from_images(yolo_model, dataset_path, layer_index)
+        self.extract_features_from_images(yolo_model, split_images_dir, layer_index)
         
         if self.feature_vectors.size == 0:
             logger.error("Analysis aborted: No features extracted.")
@@ -246,7 +264,7 @@ class ClusteringAnalyzer:
         )
         
         # STAGE 4: Sample Visualization
-        self.display_cluster_sample_images(dataset_path, num_samples_per_cluster=num_samples)
+        self.display_cluster_sample_images(split_images_dir, num_samples_per_cluster=num_samples)
         
         logger.info("==============================================")
         logger.info("Clustering Analysis Completed.")

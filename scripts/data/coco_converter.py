@@ -55,7 +55,7 @@ class CocoConverter:
     def convert_annotations(
         cls,
         coco_data: Dict[str, Any],
-        labels_path: Path
+        labels_dir: Path
     ) -> Dict[int, str]:
         """
         Converts COCO annotations (bbox) to normalized YOLO format and saves 
@@ -63,7 +63,7 @@ class CocoConverter:
         
         Args:
             coco_data (Dict[str, Any]): Loaded COCO dataset dictionary.
-            labels_path (Path): Directory where YOLO annotations will be saved.
+            labels_dir (Path): Directory where YOLO annotations will be saved.
             
         Returns:
             Dict[int, str]: Mapping of class index -> class name used for conversion.
@@ -124,7 +124,7 @@ class CocoConverter:
         logger.info(f"Total images with annotations: {len(annotations_by_image)}")
 
         # --- PHASE 2: Write YOLO Annotation Files ---
-        labels_path.mkdir(parents=True, exist_ok=True)
+        labels_dir.mkdir(parents=True, exist_ok=True)
         
         for image_name, annotations in tqdm(
             annotations_by_image.items(), 
@@ -133,12 +133,29 @@ class CocoConverter:
             ncols=100
         ):
             # Use image stem (name without extension) for label file name
-            output_file: Path = labels_path / (Path(image_name).stem + '.txt')
+            output_file: Path = labels_dir / (Path(image_name).stem + '.txt')
             with output_file.open('w') as f:
                 f.writelines(annotations)
 
-        logger.info(f"Conversion completed. YOLO annotations saved to {labels_path}")
+        # --- PHASE 3: Create empty label files for images without annotations ---
+        all_image_names = {img['file_name'] for img in coco_data.get('images', [])}
+        annotated_image_names = set(annotations_by_image.keys())
+        missing_labels = all_image_names - annotated_image_names
+
+        logger.info(f"Creating {len(missing_labels)} empty annotation files for images without classes...")
+
+        for image_name in tqdm(
+            missing_labels,
+            desc='Creating empty label files',
+            unit='file',
+            ncols=100
+        ):
+            output_file = labels_dir / (Path(image_name).stem + '.txt')
+            output_file.touch()  # Creates an empty file if it doesn't exist
+
+        logger.info(f"Conversion completed. YOLO annotations saved to {labels_dir}")
         return class_index_to_name
+
 
     def get_filtered_class_names(coco_data: Dict[str, Any]) -> Dict[int, str]:
         """
@@ -156,8 +173,9 @@ class CocoConverter:
         _, names_dict = CocoConverter._get_category_maps(coco_data)
         return names_dict
 
+
     @staticmethod
-    def create_yaml_config(class_names: Dict[int, str], yaml_output_path: Path) -> None:
+    def create_yaml_config(class_names: Dict[int, str], output_yaml: Path) -> None:
         """
         Creates a standard YOLO dataset configuration YAML file.
         
@@ -165,8 +183,8 @@ class CocoConverter:
             class_names (Dict[int, str]): Dictionary mapping class indices (0, 1, ...) to class names.
             yaml_output_path (Path): Path where the YAML file will be saved.
         """
-        data_yaml: Dict[str, Any] = {
-            # Default paths for split directories relative to the dataset folder
+        data: Dict[str, Any] = {
+            # Default paths for split directories relative to the dataset directory
             'train': 'images/train',
             'val': 'images/val',
             'test': 'images/test',
@@ -174,16 +192,16 @@ class CocoConverter:
             'names': list(class_names.values()) 
         }
 
-        yaml_output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_yaml.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(yaml_output_path, 'w') as f:
-            yaml.dump(data_yaml, f, sort_keys=False)
+        with open(output_yaml, 'w') as f:
+            yaml.dump(data, f, sort_keys=False)
 
-        logger.info(f"YOLO config YAML saved to: {yaml_output_path}")
+        logger.info(f"YOLO config YAML saved to: {output_yaml}")
 
 
     @staticmethod
-    def update_train_path(yaml_path: Path, new_train_path: str) -> None:
+    def update_train_yaml(yaml_path: Path, new_train_path: str) -> None:
         """
         Updates the 'train' key in a YOLO dataset YAML file, typically for augmentation.
         
@@ -203,52 +221,52 @@ class CocoConverter:
 
 
     @staticmethod
-    def create_new_train_yaml(original_yaml_path: Path, new_yaml_path: Path, new_train_path: str) -> None:
+    def create_new_train_yaml(original_yaml: Path, new_yaml: Path, new_train_path: str) -> None:
         """
         Creates a new YOLO dataset YAML file based on an existing one, 
         but with a modified 'train' path.
         
         Args:
-            original_yaml_path (Path): Path to the original YAML file.
+            original_yaml (Path): Path to the original YAML file.
             new_yaml_path (Path): Path where the new YAML file will be saved.
             new_train_path (str): New train path (e.g., 'images/train_augmented').
         """
         # Load the original YAML
-        with open(original_yaml_path, 'r') as f:
+        with open(original_yaml, 'r') as f:
             data: Dict[str, Any] = yaml.safe_load(f)
 
         # Update the train path
         data['train'] = new_train_path
 
         # Write to the new YAML file
-        with open(new_yaml_path, 'w') as f:
+        with open(new_yaml, 'w') as f:
             yaml.dump(data, f)
 
-        logger.info(f"Created new YAML at {new_yaml_path} with train path: {new_train_path}")
+        logger.info(f"Created new YAML at {new_yaml} with train path: {new_train_path}")
 
 
     @staticmethod
-    def update_coco_json_filenames(
-        json_map_path: Path, 
-        coco_json_path: Path, 
-        output_json_path: Path
+    def update_filenames_in_coco_json(
+        json_map_file: Path, 
+        coco_json: Path, 
+        output_json: Path
     ) -> None:
         """
         Loads a name map (original_name -> new_name), updates the 'file_name' field
         in the COCO JSON's 'images' section, and saves the modified JSON.
         
         Args:
-            json_map_path (Path): Path to JSON file mapping original filenames to new filenames.
-            coco_json_path (Path): Path to original COCO JSON file.
-            output_json_path (Path): Path to save the updated COCO JSON.
+            json_map_file (Path): Path to JSON file mapping original filenames to new filenames.
+            coco_json (Path): Path to original COCO JSON file.
+            output_json (Path): Path to save the updated COCO JSON.
         """
         
         # Load the JSON map original_name -> new_name
-        with open(json_map_path, "r") as f:
+        with open(json_map_file, "r") as f:
             name_map: Dict[str, str] = json.load(f)
 
         # Load COCO JSON
-        with open(coco_json_path, "r") as f:
+        with open(coco_json, "r") as f:
             coco: Dict = json.load(f)
 
         # Replace file_name in images according to the map
@@ -266,7 +284,7 @@ class CocoConverter:
         logger.info(f"Total image filenames renamed in COCO JSON: {replaced_count}")
 
         # Save modified JSON with indentation for readability
-        with open(output_json_path, "w") as f:
+        with open(output_json, "w") as f:
             json.dump(coco, f, indent=4)
         
-        logger.info(f"Updated COCO JSON saved to: {output_json_path}")
+        logger.info(f"Updated COCO JSON saved to: {output_json}")

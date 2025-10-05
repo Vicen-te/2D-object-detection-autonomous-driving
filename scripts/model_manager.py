@@ -21,7 +21,7 @@ class ModelManager:
         self.paths = paths
         self.config = config
         self.training_config = training_config
-        self.manager = YOLOManager(paths["mlflow_path"])  #< Central YOLO management instance
+        self.manager = YOLOManager(paths["mlflow_dir"])  #< Central YOLO management instance
 
 
     def train_multiple_models(self) -> None:
@@ -34,8 +34,8 @@ class ModelManager:
         logger.info("Starting Multiple Model Training...")
 
         # Ensure output directories exist
-        self.paths['train_results_path'].mkdir(parents=True, exist_ok=True)
-        self.paths['val_results_path'].mkdir(parents=True, exist_ok=True)
+        self.paths['train_results_dir'].mkdir(parents=True, exist_ok=True)
+        self.paths['val_results_dir'].mkdir(parents=True, exist_ok=True)
 
         # Iterate through all training configurations
         for model_name, cfg in self.training_config.items():
@@ -44,7 +44,7 @@ class ModelManager:
                 cfg['weights'], 
                 cfg['data_yml'], 
                 cfg['config_yml'], 
-                self.paths['train_results_path'], 
+                self.paths['train_results_dir'], 
                 model_name
             )
             logger.info(f"  > Training for '{model_name}' completed.")
@@ -57,15 +57,15 @@ class ModelManager:
         logger.info("Starting Model Evaluation...")
         
         for model_name, cfg in self.training_config.items():
-            model_path: Path = self.paths['train_results_path'] / model_name / 'weights' / 'best.pt'
-            val_results_path: Path = self.paths['val_results_path'] / model_name
+            best_model_weight: Path = self.paths['train_results_dir'] / model_name / 'weights' / 'best.pt'
+            val_results_dir: Path = self.paths['val_results_dir'] / model_name
             
-            if model_path.exists():
+            if best_model_weight.exists():
                 logger.info(f"  > Evaluating {model_name} on {split} set...")
-                self.manager.evaluate_model(model_path, self.paths['yolo_dataset_path'], val_results_path, split)
+                self.manager.evaluate_model(best_model_weight, self.paths['yolo_dataset_dir'], val_results_dir, split)
                 logger.info(f"  > Evaluation for '{model_name}' completed.")
             else:
-                logger.error(f"  > Model not found at {model_path}. Skipping evaluation.")
+                logger.error(f"  > Model not found at {best_model_weight}. Skipping evaluation.")
                 
         logger.info("Model Evaluation Finished.")
 
@@ -76,13 +76,13 @@ class ModelManager:
         """
         logger.info("Starting Clustering Analysis...")
 
-        model_path: Path = self.paths['train_results_path'] / model_name / 'weights' / 'best.pt'
-        if not model_path.exists():
+        best_model_weight: Path = self.paths['train_results_dir'] / model_name / 'weights' / 'best.pt'
+        if not best_model_weight.exists():
             logger.error(f"  > Analysis model '{model_name}' not found. Aborting clustering.")
             return
 
         logger.info(f"  > Executing Clustering with K=" + 
-                    f"{self.config['num_clusters']} on {self.paths["val_images_path"]}...")
+                    f"{self.config['num_clusters']} on {self.paths["val_images_dir"]}...")
         
         analyzer = ClusteringAnalyzer(
             self.config['num_clusters'], 
@@ -90,8 +90,8 @@ class ModelManager:
         )
 
         analyzer.run_analysis(
-            model_path, 
-            self.paths["val_images_path"], 
+            best_model_weight, 
+            self.paths["val_images_dir"], 
             self.config["num_samples"], 
             self.config["dimension"], 
             self.config["layer_index"], 
@@ -106,24 +106,24 @@ class ModelManager:
         """
         logger.info("Starting Video Prediction/Tracking...")
 
-        model_path: Path = self.paths['train_results_path'] / model_name / 'weights' / 'best.pt'
-        if not model_path.exists():
+        best_model_weight: Path = self.paths['train_results_dir'] / model_name / 'weights' / 'best.pt'
+        if not best_model_weight.exists():
             logger.error(f"  > Analysis model '{model_name}' not found. Aborting video prediction/tracking.")
             return
 
         logger.info(f"  > Running Prediction/Tracking on video " +
-                    f"{self.paths['video_source'].name}...")
+                    f"{self.paths['video_file'].name}...")
         
         self.manager.run_tracking(
-            model_path, 
-            self.paths['video_source'], 
+            best_model_weight, 
+            self.paths['video_file'], 
             self.config['conf_thres'], 
             self.config['iou_thres']
         )
 
         self.manager.run_prediction(
-            model_path, 
-            self.paths['video_source'], 
+            best_model_weight, 
+            self.paths['video_file'], 
             self.config['conf_thres'], 
             self.config['iou_thres']
         )

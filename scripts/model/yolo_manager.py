@@ -41,10 +41,10 @@ class YOLOManager:
 
     def train_model(
         self, 
-        model_path: str, 
-        data_yaml_path: str, 
-        cfg_yaml_path: str, 
-        project_path: str, 
+        model_file: str, 
+        dataset_yaml: str, 
+        cfg_yaml: str, 
+        project_dir: str, 
         name: str, 
         batch_size: int = 32,
         epochs: int = 200
@@ -53,12 +53,11 @@ class YOLOManager:
         Loads a YOLO model, applies layer freezing based on the unfreeze level, and starts training.
         
         Args:
-            model_path: Path to the pre-trained weights (e.g., 'yolov8n.pt').
-            data_yaml_path: Path to the dataset YAML file.
-            cfg_yaml_path: Path to the model configuration file (e.g., 'yolov8n.yaml').
-            project_path: Directory to save results to.
+            model_file: Path to the pre-trained weights (e.g., 'yolov8n.pt').
+            dataset_yaml: Path to the dataset YAML file.
+            cfg_yaml: Path to the model configuration file (e.g., 'yolov8n.yaml').
+            project_dir: Directory to save results to.
             name: Experiment run name.
-            unfreeze_level: 0 (no freezing/full fine-tuning), 1 (freeze backbone), 2 (freeze backbone and neck), 3 (freeze all).
             batch_size: Training batch size.
             epochs: Number of training epochs.
             
@@ -66,13 +65,13 @@ class YOLOManager:
             YOLO: The trained YOLO model object.
         """
         logger.info(f"--- Starting Training Run: {name} ---")
-        model: YOLO = YOLO(model_path)
+        model: YOLO = YOLO(model_file)
         
         # Start Training
         model.train(
-            data=data_yaml_path,
-            cfg=cfg_yaml_path,
-            project=project_path,
+            data=dataset_yaml,
+            cfg=cfg_yaml,
+            project=project_dir,
             name=name,
             batch=batch_size,
             device=self.device,
@@ -82,24 +81,36 @@ class YOLOManager:
         logger.info("--- Training Completed ---")
         return model
 
-    def evaluate_model(self, model_path: str, data_yaml_path: str, val_results_path: str, split='val') -> Dict[str, Any]:
+
+    def evaluate_model(self, model_file: str, dataset_yaml: str, val_results_dir: str, split='val') -> Dict[str, Any]:
         """
-        Evaluates a trained model on the validation set specified in the data YAML.
-        
+        Evaluates a trained YOLO model on a specified validation set and extracts key metrics.
+
         Args:
-            model_path: Path to the trained model weights (e.g., 'runs/train/exp/weights/best.pt').
-            data_yaml_path: Path to the dataset YAML file containing the 'val' path.
-            
+            model_file: Path to the trained model weights (e.g., 'runs/train/exp/weights/best.pt').
+            dataset_yaml: Path to the dataset YAML file containing the validation paths.
+            val_results_dir: Directory where evaluation results (e.g., confusion matrix) will be saved.
+            split: Dataset split to evaluate ('val' by default).
+
         Returns:
-            Dict[str, Any]: A dictionary containing the evaluation metrics.
+            Dict[str, Any]: A dictionary containing the evaluation metrics, including:
+                - 'map50-95': mean Average Precision (mAP) over IoU 0.5:0.95
+                - 'map50': mAP at IoU 0.5
+                - 'map75': mAP at IoU 0.75
+                - 'precision': model precision
+                - 'recall': model recall
+                - 'f1_score': F1-score calculated from precision and recall
+                - 'confusion_matrix_path': Path to the saved confusion matrix image
         """
-        logger.info(f"--- Starting Evaluation of Model: {model_path} ---")
-        model: YOLO = YOLO(model_path)
+
+        logger.info(f"--- Starting Evaluation of Model: {model_file} ---")
+        model: YOLO = YOLO(model_file)
 
         # Run model validation (evaluation)
-        metrics: Any = model.val(data=data_yaml_path, split=split)
+        metrics: Any = model.val(data=dataset_yaml, split=split)
         
         # Extract metrics into a standard dictionary
+         # Includes mAP values, precision, recall, F1-score, and path to confusion matrix
         results: Dict[str, Any] = {
             'map50-95': metrics.box.map,
             'map50': metrics.box.map50,
@@ -119,18 +130,18 @@ class YOLOManager:
         return results
 
 
-    def run_prediction(self, model_path: str, source: Union[str, Path], conf: float = 0.5, iou: float = 0.7):
+    def run_prediction(self, model_file: str, source: Union[str, Path], conf: float = 0.5, iou: float = 0.7):
         """
         Runs prediction/inference on a given image or video source in streaming mode.
         
         Args:
-            model_path: Path to the trained model weights.
+            model_file: Path to the trained model weights.
             source: Path to the image file, video file, or directory.
             conf: Confidence threshold for predictions.
             iou: IoU threshold for Non-Maximum Suppression (NMS).
         """
         logger.info(f"--- Running Prediction on {source} ---")
-        model: YOLO = YOLO(model_path)
+        model: YOLO = YOLO(model_file)
 
         # Stream frame by frame to avoid RAM accumulation
         for _ in model.predict(
@@ -144,21 +155,21 @@ class YOLOManager:
         ):
             pass  #< Process each frame; nothing is stored in RAM
 
-        logger.info(f"Prediction results saved to 'runs/detect/predict...' folder.")
+        logger.info(f"Prediction results saved to 'runs/detect/predict...' directory.")
 
 
-    def run_tracking(self, model_path: str, source: Union[str, Path], conf: float = 0.25, iou: float = 0.7):
+    def run_tracking(self, model_file: str, source: Union[str, Path], conf: float = 0.25, iou: float = 0.7):
         """
         Runs object tracking on a video source in streaming mode.
         
         Args:
-            model_path: Path to the trained model weights.
+            model_file: Path to the trained model weights.
             source: Path to the video file or stream URL.
             conf: Confidence threshold for detections.
             iou: IoU threshold for tracking NMS.
         """
         logger.info(f"--- Running Tracking on {source} ---")
-        model: YOLO = YOLO(model_path)
+        model: YOLO = YOLO(model_file)
 
          # Stream frame by frame to avoid RAM accumulation
         for _ in model.track(
@@ -172,7 +183,7 @@ class YOLOManager:
         ):
             pass  #< Process each frame; nothing is stored in RAM
 
-        logger.info("Tracking results saved to 'runs/track/track...' folder.")
+        logger.info("Tracking results saved to 'runs/track/track...' directory.")
 
 
     @staticmethod

@@ -194,21 +194,21 @@ class YoloAugmenter:
 
 
     @staticmethod
-    def read_yolo_labels(label_path: Path) -> List[List[float]]:
+    def read_yolo_labels(label_file: Path) -> List[List[float]]:
         """
         Read YOLO format labels from a text file.
 
         Args:
-            label_path: Path to the label file
+            label_file: Path to the label file
 
         Returns: 
             List of labels, each as [class_id, x_center, y_center, width, height]
         """
         labels: List[List[float]] = []
-        if not label_path.exists():
+        if not label_file.exists():
             return labels
         
-        with open(label_path, 'r') as f:
+        with open(label_file, 'r') as f:
             for line in f:
                 parts: List[str] = line.strip().split()
                 if len(parts) == 5:
@@ -218,7 +218,7 @@ class YoloAugmenter:
                         labels.append([float(class_id)] + coords) # Use float for class_id to match list type
                         
                     except ValueError:
-                        logger.exception(f"Skipping invalid line in {label_path}: {line.strip()}")
+                        logger.exception(f"Skipping invalid line in {label_file}: {line.strip()}")
         return labels
 
 
@@ -376,10 +376,10 @@ class YoloAugmenter:
 
     def _process_single_image(
         self,
-        img_path: Path,
-        input_labels_path: Path,
-        output_images_path: Path,
-        output_labels_path: Path,
+        image_file: Path,
+        input_labels_dir: Path,
+        output_images_dir: Path,
+        output_labels_dir: Path,
         augmentations_per_image: int
     ) -> None:
         """
@@ -387,23 +387,23 @@ class YoloAugmenter:
         generate augmented copies and save them along with the original.
 
         Args:
-            img_path: Path to the original image file
-            input_labels_path: Path to the folder containing YOLO label files
-            output_images_path: Path to the folder where augmented images will be saved
-            output_labels_path: Path to the folder where augmented labels will be saved
+            image_file: Path to the original image file
+            input_labels_dir: Path to the directory containing YOLO label files
+            output_images_dir: Path to the directory where augmented images will be saved
+            output_labels_dir: Path to the directory where augmented labels will be saved
             augmentations_per_image: Number of augmented copies to generate per image
         """
         try:
-            image: Image.Image = Image.open(img_path).convert("RGB")
+            image: Image.Image = Image.open(image_file).convert("RGB")
 
         except Exception as e:
-            logger.error(f"opening image {img_path}: {e}")
+            logger.error(f"opening image {image_file}: {e}")
             return
 
         orig_size: Tuple[int, int] = (image.width, image.height)
 
-        labels_path: Path = input_labels_path / f"{img_path.stem}.txt"
-        labels: List[List[float]] = self.read_yolo_labels(labels_path)
+        labels_file: Path = input_labels_dir / f"{image_file.stem}.txt"
+        labels: List[List[float]] = self.read_yolo_labels(labels_file)
         
         # Save augmented copies
         for i in range(augmentations_per_image):
@@ -412,23 +412,23 @@ class YoloAugmenter:
 
             aug_labels: List[List[float]] = self.transform_yolo_labels(labels, matrix, orig_size, new_size)
 
-            aug_image_name: str = f"{img_path.stem}_aug{i+1}.jpg"
-            aug_label_name: str = f"{img_path.stem}_aug{i+1}.txt"
+            aug_image_name: str = f"{image_file.stem}_aug{i+1}.jpg"
+            aug_label_name: str = f"{image_file.stem}_aug{i+1}.txt"
 
-            aug_image.save(output_images_path / aug_image_name)
-            self.save_yolo_labels(aug_labels, output_labels_path / aug_label_name)
+            aug_image.save(output_images_dir / aug_image_name)
+            self.save_yolo_labels(aug_labels, output_labels_dir / aug_label_name)
 
-        # Save original image and labels unchanged in output folders (included in training data)
-        image.save(output_images_path / img_path.name)
-        self.save_yolo_labels(labels, output_labels_path / f"{img_path.stem}.txt")
+        # Save original image and labels unchanged in output directories (included in training data)
+        image.save(output_images_dir / image_file.name)
+        self.save_yolo_labels(labels, output_labels_dir / f"{image_file.stem}.txt")
 
 
     def augment_dataset(
         self,
-        input_images_path: Path,
-        input_labels_path: Path,
-        output_images_path: Path,
-        output_labels_path: Path,
+        input_images_dir: Path,
+        input_labels_dir: Path,
+        output_images_dir: Path,
+        output_labels_dir: Path,
         augmentations_per_image: int = 3,
         max_workers: int = 8
     ) -> None:
@@ -436,39 +436,39 @@ class YoloAugmenter:
         Augment an entire dataset using multithreading.
         
         Args:
-            input_images_path: Path to the folder containing original images.
-            input_labels_path: Path to the folder containing YOLO label files.
-            output_images_path: Path to the folder where augmented images will be saved.
-            output_labels_path: Path to the folder where augmented labels will be saved.
+            input_images_dir: Path to the directory containing original images.
+            input_labels_dir: Path to the directory containing YOLO label files.
+            output_images_dir: Path to the directory where augmented images will be saved.
+            output_labels_dir: Path to the directory where augmented labels will be saved.
             augmentations_per_image: Number of augmentations to generate per image (including the original).
             max_workers: Maximum number of worker threads for parallel processing.
         """
-        image_paths: List[Path] = sorted([
-            p for p in input_images_path.iterdir() if p.suffix.lower() in ['.jpg', '.jpeg', '.png']
+        image_files: List[Path] = sorted([
+            p for p in input_images_dir.iterdir() if p.suffix.lower() in ['.jpg', '.jpeg', '.png']
         ])
         
-        if not image_paths:
-            logger.error(f"No images found in {input_images_path}")
+        if not image_files:
+            logger.error(f"No images found in {input_images_dir}")
             return
         
-        total_images: int = len(image_paths)
-        logger.info(f"Found {total_images} images in {input_images_path}. Generating {augmentations_per_image + 1} total samples per image.")
+        total_images: int = len(image_files)
+        logger.info(f"Found {total_images} images in {input_images_dir}. Generating {augmentations_per_image + 1} total samples per image.")
 
         # Ensure output directories exist
-        output_images_path.mkdir(parents=True, exist_ok=True)
-        output_labels_path.mkdir(parents=True, exist_ok=True)
+        output_images_dir.mkdir(parents=True, exist_ok=True)
+        output_labels_dir.mkdir(parents=True, exist_ok=True)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             
             # Submit tasks to the thread pool
-            for img_path in image_paths:
+            for image_file in image_files:
                 future = executor.submit(
                     self._process_single_image, 
-                    img_path, 
-                    input_labels_path, 
-                    output_images_path, 
-                    output_labels_path, 
+                    image_file, 
+                    input_labels_dir, 
+                    output_images_dir, 
+                    output_labels_dir, 
                     augmentations_per_image
                 )
                 futures.append(future)

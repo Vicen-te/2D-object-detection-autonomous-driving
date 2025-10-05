@@ -22,26 +22,26 @@ class FiftyOneVisualizer:
         path: Path, 
         format: str, 
         split: Optional[str] = None, 
-        names_map_path: Optional[Path] = None
+        names_map_file: Optional[Path] = None
     ):
         """
         Initialize visualizer with dataset parameters.
 
         Args:
             format: Dataset format ("yolo" or "coco").
-            path: Path to the dataset root folder.
+            path: Path to the dataset root directory.
             split: Dataset split (required for YOLO format).
             names_map_path: Path to JSON file mapping original names (optional).
         """
         self.path: Path = path
         self.format: str = format
         self.split: Optional[str] = split
-        self.names_map_path: Optional[Path] = names_map_path
+        self.names_map_file: Optional[Path] = names_map_file
         self.dataset: fo.Dataset = self.create_dataset(path, format, split)
 
 
     @staticmethod
-    def load_coco_dataset(images_path: Path, labels_path: Path) -> fo.Dataset:
+    def load_coco_dataset(images_dir: Path, coco_json: Path) -> fo.Dataset:
         """
         Load a COCO dataset from a directory containing images and a JSON file with annotations.
         
@@ -52,12 +52,12 @@ class FiftyOneVisualizer:
         Returns:
             fo.Dataset: The loaded FiftyOne dataset.
         """
-        logger.info(f"Loading COCO dataset from images: {images_path}, labels: {labels_path}")
+        logger.info(f"Loading COCO dataset from images: {images_dir}, labels: {coco_json}")
         
         dataset: fo.Dataset = fo.Dataset.from_dir(
             dataset_type=fot.COCODetectionDataset,
-            data_path=str(images_path),
-            labels_path=str(labels_path),
+            data_path=str(images_dir),
+            labels_path=str(coco_json),
             include_id=True,
         )
         dataset.compute_metadata()
@@ -71,7 +71,7 @@ class FiftyOneVisualizer:
         Load a YOLO dataset from a directory and YAML file.
         
         Args:
-            dataset_path: Path to the root directory containing the YOLO dataset structure (images/labels folders).
+            dataset_path: Path to the root directory containing the YOLO dataset structure (images/labels directories).
             yaml_path: Path to the YAML file defining the dataset structure and classes.
             split: The split of the dataset to load (e.g., 'train', 'val', 'test').
             
@@ -159,7 +159,7 @@ class FiftyOneVisualizer:
 
         Args:
             format: Dataset format ("yolo" or "coco").
-            path: Path to the dataset root folder.
+            path: Path to the dataset root directory.
             split: Dataset split (required for YOLO format).
 
         Returns:
@@ -168,27 +168,27 @@ class FiftyOneVisualizer:
         dataset: fo.Dataset
 
         if format == "coco":
-            images_path: Path = path / "images"
-            coco_path: Path = path / "labels_coco.json"
-            if not images_path.exists() or not coco_path.exists():
+            images_dir: Path = path / "images"
+            coco_json: Path = path / "labels_coco.json"
+            if not images_dir.exists() or not coco_json.exists():
                 raise FileNotFoundError(f"Required files/dirs for COCO not found in {path}")
             
-            dataset = cls.load_coco_dataset(images_path, coco_path)
+            dataset = cls.load_coco_dataset(images_dir, coco_json)
 
         elif format == "yolo":
             if not split:
                 raise ValueError("Split must be provided for YOLO format (e.g., 'train', 'val', 'test').")
             
-            yolo_yaml_path: Path = path / "yolo_dataset.yaml"
-            if not yolo_yaml_path.exists():
+            yolo_yaml: Path = path / "yolo_dataset.yaml"
+            if not yolo_yaml.exists():
                 # Common scenario: yaml is one level up
-                yolo_yaml_path = path.parent / "yolo_dataset.yaml"
-                if not yolo_yaml_path.exists():
+                yolo_yaml = path.parent / "yolo_dataset.yaml"
+                if not yolo_yaml.exists():
                     raise FileNotFoundError(
-                        f"YOLO YAML config not found at {path / 'yolo_dataset.yaml'} or {yolo_yaml_path}"
+                        f"YOLO YAML config not found at {path / 'yolo_dataset.yaml'} or {yolo_yaml}"
                     )
             
-            dataset = cls.load_yolo_dataset(path, yolo_yaml_path, split)
+            dataset = cls.load_yolo_dataset(path, yolo_yaml, split)
 
         else:
             raise ValueError(f"Unsupported dataset format: {format}. Must be 'yolo' or 'coco'.")
@@ -202,22 +202,22 @@ class FiftyOneVisualizer:
         path: Path, 
         format: str, 
         split: Optional[str] = None, 
-        names_map_path: Optional[Path] = None
+        names_map_file: Optional[Path] = None
     ) -> None:
         """
         Loads and visualizes a dataset in the FiftyOne app.
         
         Args:
             format: Format of the dataset, either "yolo" or "coco".
-            path: Path to the root folder of the dataset.
+            path: Path to the root directory of the dataset.
             split: Split of the dataset (only for YOLO format).
-            names_map_path: Path to the original names JSON file (only for YOLO format, used for augmentation/renaming).
+            names_map_file: Path to the original names JSON file (only for YOLO format, used for augmentation/renaming).
         """
         dataset: fo.Dataset = FiftyOneVisualizer.create_dataset(path, format, split)
 
         # Add original names field if the map path is provided
-        if names_map_path: 
-            FiftyOneVisualizer.add_original_names_field(dataset, names_map_path)
+        if names_map_file: 
+            FiftyOneVisualizer.add_original_names_field(dataset, names_map_file)
         
         logger.info("\nLaunching FiftyOne App... (This blocks until the app is closed)")
         session: fo.Session = fo.launch_app(dataset, auto = False)
@@ -230,8 +230,8 @@ class FiftyOneVisualizer:
         Launch FiftyOne app using the stored parameters.
         """
         # Add original names field if the map path is provided
-        if self.names_map_path: 
-            self.add_original_names_field(self.dataset, self.names_map_path)
+        if self.names_map_file: 
+            self.add_original_names_field(self.dataset, self.names_map_file)
         
         logger.info("\nLaunching FiftyOne App... (This blocks until the app is closed)")
         session: fo.Session = fo.launch_app(self.dataset, auto = False)

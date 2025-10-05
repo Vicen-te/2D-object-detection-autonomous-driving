@@ -42,27 +42,27 @@ class DatasetProcessor:
         logger.info("Starting COCO to YOLO Conversion...")
         
         # 1. Rename Images and Update COCO JSON
-        self.paths['renamed_images_path'].mkdir(exist_ok=True)
+        self.paths['renamed_images_dir'].mkdir(exist_ok=True)
         
         FileSystemManager.rename_and_copy_images(
-            self.paths['unprocessed_images_path'], 
-            self.paths['renamed_images_path'], 
-            self.paths['original_names_map']
+            self.paths['unprocessed_images_dir'], 
+            self.paths['renamed_images_dir'], 
+            self.paths['original_names_map_file']
         )
 
-        CocoConverter.update_coco_json_filenames(
-            self.paths['original_names_map'], 
-            self.paths['original_coco_json_file'], 
-            self.paths['coco_json_file']
+        CocoConverter.update_filenames_in_coco_json(
+            self.paths['original_names_map_file'], 
+            self.paths['original_coco_json'], 
+            self.paths['coco_json']
         )
 
         # 2. Prepare YOLO Label Directories
-        FileSystemManager.clear_directory(self.paths['renamed_labels_path'])
-        self.paths['renamed_labels_path'].mkdir(parents=True, exist_ok=True)
+        self.paths['renamed_labels_dir'].mkdir(parents=True, exist_ok=True)
+        FileSystemManager.clear_directory(self.paths['renamed_labels_dir'])
 
         # 3. Load and Convert Annotations
         try:
-            with open(self.paths['coco_json_file'], 'r') as f:
+            with open(self.paths['coco_json'], 'r') as f:
                 coco_data: Dict = json.load(f)
 
         except Exception as e:
@@ -70,8 +70,8 @@ class DatasetProcessor:
 
         class_names: Dict[str, Any] = CocoConverter.get_filtered_class_names(coco_data)
         
-        CocoConverter.convert_annotations(coco_data, self.paths['renamed_labels_path'])
-        CocoConverter.create_yaml_config(class_names, self.paths['yolo_dataset_path'])
+        CocoConverter.convert_annotations(coco_data, self.paths['renamed_labels_dir'])
+        CocoConverter.create_yaml_config(class_names, self.paths['yolo_base_dataset_yaml'])
 
         logger.info("COCO to YOLO conversion completed.")
 
@@ -83,46 +83,35 @@ class DatasetProcessor:
         """
         logger.info("Starting Stratified Dataset Split...")        
 
-        all_image_paths: List[Path] = list(self.paths['renamed_images_path'].glob('*.*'))
-        logger.info(f"  > Total images found: {len(all_image_paths)}")
-
-        # Map images to their dominant class
-        image_dominant_class_map: Dict[Path, int] = DatasetSplitter.map_images_to_dominant_class(
-            all_image_paths, 
-            self.paths['renamed_labels_path']
-        )
-
-        if not image_dominant_class_map:
-            raise Exception("No annotated images found for splitting.")
+        renamed_images: List[Path] = list(self.paths['renamed_images_dir'].glob('*.*'))
+        logger.info(f"  > Total images found: {len(renamed_images)}")
 
         # Stratified Split
-        train_images, val_images, test_images = DatasetSplitter.stratified_split(
-            all_image_paths, 
-            self.paths['renamed_labels_path']
+        splits: Dict[str, List[Path]] = DatasetSplitter.stratified_split(
+            renamed_images, 
+            self.paths['renamed_labels_dir']
         )
 
-        split_data: Dict[str, List[str]] = {
-            'train': train_images,
-            'val': val_images,
-            'test': test_images
-        }
-
         # Save images and labels
-        for split, images in split_data.items():
-            split_images_path: Path = self.paths['images_path'] / split
-            split_labels_path: Path = self.paths['labels_path'] / split
+        for split, images in splits.items():
+            split_images_dir: Path = self.paths['images_dir'] / split
+            split_labels_dir: Path = self.paths['labels_dir'] / split
             
-            split_images_path.mkdir(parents=True, exist_ok=True)
-            split_labels_path.mkdir(parents=True, exist_ok=True)
+            split_images_dir.mkdir(parents=True, exist_ok=True)
+            split_labels_dir.mkdir(parents=True, exist_ok=True)
 
-            DatasetSplitter.save_images_with_labels(
+            # save_images_with_labels <-- saves the dataset while keeping the original renamed directories intact
+            DatasetSplitter.organize_splits( #< moves images and labels into the specified split directories
                 images, 
-                self.paths['renamed_labels_path'], 
-                split_labels_path, 
-                split_images_path, 
+                self.paths['renamed_labels_dir'], 
+                split_labels_dir, 
+                split_images_dir, 
                 split
             )
             logger.info(f"  > {split.capitalize()} set: {len(images)} images.")
+
+        self.paths['renamed_labels_dir'].rmdir()
+        self.paths['renamed_images_dir'].rmdir()
 
         logger.info("Dataset splitting completed.")
 
@@ -133,22 +122,22 @@ class DatasetProcessor:
         """
         logger.info("Starting Data Augmentation for the Train set...")
         
-        self.paths['train_aug_images_path'].mkdir(parents=True, exist_ok=True)
-        self.paths['train_aug_labels_path'].mkdir(parents=True, exist_ok=True)
+        self.paths['train_aug_images_dir'].mkdir(parents=True, exist_ok=True)
+        self.paths['train_aug_labels_dir'].mkdir(parents=True, exist_ok=True)
 
         yolo_augmenter = YoloAugmenter(self.yolo_config)
         yolo_augmenter.augment_dataset(
-            self.paths['train_images_path'], self.paths['train_labels_path'],
-            self.paths['train_aug_images_path'], self.paths['train_aug_labels_path'],
+            self.paths['train_images_dir'], self.paths['train_labels_dir'],
+            self.paths['train_aug_images_dir'], self.paths['train_aug_labels_dir'],
             self.config['augmentations_per_image'],
             self.config['max_workers']
         )
         
         # Update or create a the YAML file to point to the augmented train set
-        # CocoConverter.update_train_path(self.paths['yolo_dataset_path'], 'images/train_augmented')
+        # CocoConverter.update_train_yaml(self.paths['yolo_aug_dataset_yaml'], 'images/train_augmented')
         CocoConverter.create_new_train_yaml(
-            self.paths['yolo_dataset_path'], 
-            self.paths['yolo_dataset_path2'], 
+            self.paths['yolo_base_dataset_yaml'], 
+            self.paths['yolo_aug_dataset_yaml'], 
             'images/train_augmented'
         )
         logger.info("Data augmentation and YAML update completed.")
