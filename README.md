@@ -12,6 +12,7 @@ This project implements a complete pipeline for 2D object detection in autonomou
 - Experiment comparison and results management with MLflow.
 - Interactive dataset exploration and error analysis using FiftyOne.
 - Modular codebase to extend for research or production use cases.
+- Published fine-tuning run: **mAP50 0.69 / mAP50-95 0.44** on nuImages (see [Results](#results)).
 
 ---
 
@@ -155,6 +156,62 @@ python scripts/visualization/fiftyone_cli_visualizer.py \
   --s <train_val_or_test> \       # Dataset split: train, val, or test (optional, default: val)
   --n <path_to_names_json>        # Path to the original names JSON (optional)
 ```
+
+---
+
+## Results
+
+Fine-tuning run of **YOLO11n** (COCO-pretrained) on the nuImages 7-class dataset.
+All numbers come from [`training_results/finetuning/results.csv`](training_results/finetuning/results.csv);
+the exact configuration is in [`args.yaml`](training_results/finetuning/args.yaml).
+
+**Setup:** AdamW, `lr0=1e-3`, `weight_decay=0.01`, `imgsz=960`, `batch=32`, AMP on, mosaic off,
+5 warm-up epochs, early stopping with `patience=10`. Training stopped at epoch 172 of a 1000-epoch
+budget (~21 h on a single GPU). Best checkpoint by mAP50-95 is epoch 162.
+
+| Checkpoint | Precision | Recall | mAP50 | mAP50-95 |
+|---|---:|---:|---:|---:|
+| epoch 1 | 0.635 | 0.083 | 0.121 | 0.054 |
+| epoch 50 | 0.747 | 0.566 | 0.658 | 0.394 |
+| epoch 100 | 0.763 | 0.590 | 0.680 | 0.422 |
+| **epoch 162 (best)** | **0.779** | **0.602** | **0.691** | **0.435** |
+| epoch 172 (last) | 0.764 | 0.608 | 0.691 | 0.435 |
+
+<p align="center">
+  <img src="training_results/finetuning/results.png" width="85%" alt="Training curves">
+</p>
+
+### What the confusion matrix says
+
+<p align="center">
+  <img src="training_results/finetuning/confusion_matrix_normalized.png" width="60%" alt="Normalized confusion matrix">
+</p>
+
+- **The gap between precision (0.78) and recall (0.60) is misses, not mislabels.** The
+  `background` row shows that 24–43% of each class is never detected at all: humans (43%),
+  buses (41%), trucks (33%), traffic cones (32%). Once an object *is* detected, the class is
+  mostly right (car 0.72, motorcycle 0.71, bicycle 0.68, traffic cone 0.68).
+- **Large-vehicle confusion.** 11% of buses are predicted as trucks and 15% of trucks as cars.
+  These are the two classes with the fewest training instances, and they share silhouettes at
+  the resolutions where they appear.
+- **Human is the hardest class** (0.56 recall on detected instances, 43% missed): pedestrians
+  are small relative to the 960 px frame and a nano backbone has limited capacity for them.
+
+Sample validation batch (ground truth vs. predictions):
+
+<p align="center">
+  <img src="training_results/finetuning/val_batch0_labels.jpg" width="48%" alt="Ground truth">
+  <img src="training_results/finetuning/val_batch0_pred.jpg" width="48%" alt="Predictions">
+</p>
+
+### Honest scope
+
+- Only the **AdamW fine-tuning** regime has been trained to completion. The repository also ships
+  configs for `sgd_from_scratch.yaml` and `adamw_transfer_learning.yaml` (first 10 layers frozen),
+  but those runs are **not** included here; the comparison between regimes is still open work.
+- `YOLO11n` was chosen for training-time budget, not accuracy. The obvious next steps are a larger
+  backbone (`s`/`m`) and class-balanced sampling for `bus`, `truck` and `human`.
+- Model weights are not committed; reproduce with the config above and `scripts/main.py`.
 
 ---
 

@@ -6,7 +6,20 @@ dataset/
 
 # YOLO outputs: training runs, predictions, and video tracking
 runs/
-training_results/
+training_results/*
+# ...but keep the lightweight, reviewable artefacts of the published run
+# (metrics, curves, config, sample predictions). Weights, TF events and
+# the raw predictions.json stay out of the repo.
+!training_results/finetuning/
+training_results/finetuning/*
+!training_results/finetuning/results.csv
+!training_results/finetuning/results.png
+!training_results/finetuning/args.yaml
+!training_results/finetuning/confusion_matrix_normalized.png
+!training_results/finetuning/PR_curve.png
+!training_results/finetuning/F1_curve.png
+!training_results/finetuning/val_batch0_pred.jpg
+!training_results/finetuning/val_batch0_labels.jpg
 
 # Video files
 videos/
