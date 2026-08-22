@@ -204,11 +204,36 @@ Sample validation batch (ground truth vs. predictions):
   <img src="training_results/finetuning/val_batch0_pred.jpg" width="48%" alt="Predictions">
 </p>
 
+### The three regimes, compared at an equal budget
+
+The full-length run above is fine-tuning only. To actually compare the three regimes the pipeline
+ships, all three were trained under an **identical budget** — 30 epochs, 25% of the non-augmented
+train split, batch 16, no early stopping (`scripts/regime_comparison.py`, results in
+[`training_results/regime_comparison/`](training_results/regime_comparison/)):
+
+| Regime | Precision | Recall | mAP50 | mAP50-95 | GPU time |
+|---|---:|---:|---:|---:|---:|
+| SGD from scratch | 0.480 | 0.333 | 0.343 | 0.174 | 52 min |
+| **AdamW transfer learning** (first 10 layers frozen) | **0.681** | **0.474** | **0.545** | **0.333** | 41 min |
+| AdamW fine-tuning (all layers) | 0.635 | 0.454 | 0.511 | 0.291 | 52 min |
+
+Two things worth reading out of this table:
+
+- **COCO pretraining is worth more than the entire budget.** From scratch after 30 epochs (0.174)
+  is not close to either pretrained regime; its best epoch was 20 and it had stopped improving.
+- **Under a short budget, freezing beats unfreezing.** Transfer learning converges faster because
+  the frozen backbone cannot be disturbed; full fine-tuning spends its early epochs perturbing
+  pretrained weights and needs longer to recover — which the long run confirms: given 172 epochs,
+  fine-tuning reaches mAP50-95 **0.435**, well past transfer learning's short-budget 0.333. Freeze
+  for fast turnaround, unfreeze when you can afford the schedule.
+
+Numbers are not comparable with the headline table above (different split, fraction, batch and
+epochs); the comparison is only internal to this table, which is the point of an equal budget.
+
 ### Honest scope
 
-- Only the **AdamW fine-tuning** regime has been trained to completion. The repository also ships
-  configs for `sgd_from_scratch.yaml` and `adamw_transfer_learning.yaml` (first 10 layers frozen),
-  but those runs are **not** included here; the comparison between regimes is still open work.
+- The headline table is the only full-length run; the regime comparison above is deliberately
+  short-budget. A full-length run of the other two regimes remains open work.
 - `YOLO11n` was chosen for training-time budget, not accuracy. The obvious next steps are a larger
   backbone (`s`/`m`) and class-balanced sampling for `bus`, `truck` and `human`.
 - Model weights are not committed; reproduce with the config above and `scripts/main.py`.

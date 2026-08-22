@@ -31,7 +31,8 @@ videos/
 __pycache__
 
 # MLflow tracking directory
-mlflow!training_results/regime_comparison/
+mlflow
+!training_results/regime_comparison/
 training_results/regime_comparison/*
 !training_results/regime_comparison/summary.csv
 !training_results/regime_comparison/*/

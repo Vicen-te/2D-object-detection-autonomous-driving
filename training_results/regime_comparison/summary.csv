@@ -1,0 +1,4 @@
+regime,epochs,hours,best_epoch,precision,recall,mAP50,mAP50-95
+sgd_from_scratch,30,0.86,20,0.4798,0.3329,0.343,0.174
+adamw_transfer_learning,30,0.68,30,0.6814,0.4744,0.5451,0.3331
+adamw_finetuning,30,0.86,30,0.6352,0.4538,0.5108,0.2908
